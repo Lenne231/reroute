@@ -26,7 +26,12 @@ export type RouteConfig<
   children?: readonly RouteConfig[];
 };
 
-export type AnyRouteConfig = RouteConfig<string, LoaderFn<any, any, any> | undefined>;
+export type AnyRouteConfig = {
+  path: string;
+  loader?: LoaderFn<any, any, any>;
+  render: (args: any) => ReactNode;
+  children?: readonly AnyRouteConfig[];
+};
 
 type RoutePathsFromNode<Node extends AnyRouteConfig, Prefix extends string> =
   NormalizePath<JoinPath<Prefix, Node["path"]>> |
@@ -55,7 +60,38 @@ export type Router<TRoutes extends readonly AnyRouteConfig[]> = {
   readonly compiledRoutes: CompiledRoute[];
 };
 
-export function defineRoute<const TRoute extends AnyRouteConfig>(route: TRoute): TRoute {
+export function defineRoute<
+  const TPath extends string,
+  TLoaderData,
+  TLoaderContext = unknown,
+  const TChildren extends readonly AnyRouteConfig[] | undefined = undefined
+>(route: {
+  path: TPath;
+  loader: (
+    args: LoaderArgs<ParamsForPath<NormalizePath<TPath>>, TLoaderContext>
+  ) => TLoaderData | Promise<TLoaderData>;
+  render: (args: {
+    params: ParamsForPath<NormalizePath<TPath>>;
+    loaderData: Awaited<TLoaderData>;
+  }) => ReactNode;
+  children?: TChildren;
+}): RouteConfig<TPath, LoaderFn<ParamsForPath<NormalizePath<TPath>>, Awaited<TLoaderData>, TLoaderContext>> & {
+  children?: TChildren;
+};
+
+export function defineRoute<
+  const TPath extends string,
+  const TChildren extends readonly AnyRouteConfig[] | undefined = undefined
+>(route: {
+  path: TPath;
+  render: (args: {
+    params: ParamsForPath<NormalizePath<TPath>>;
+    loaderData: undefined;
+  }) => ReactNode;
+  children?: TChildren;
+}): RouteConfig<TPath, undefined> & { children?: TChildren };
+
+export function defineRoute(route: any): any {
   return route;
 }
 
@@ -101,10 +137,11 @@ function compileNodes(
   const siblingPaths = new Set<string>();
   return routes.map((route, index) => {
     const fullPath = normalizeRuntimePath(parentPath === "/" ? route.path : `${parentPath}/${route.path}`);
-    if (siblingPaths.has(fullPath)) {
-      throw new Error(`Duplicate sibling route path detected: ${fullPath}`);
+    const siblingKey = normalizeRuntimePath(route.path);
+    if (siblingPaths.has(siblingKey)) {
+      throw new Error(`Duplicate sibling route path detected: ${siblingKey}`);
     }
-    siblingPaths.add(fullPath);
+    siblingPaths.add(siblingKey);
     const id = parentId ? `${parentId}.${index}` : `${index}`;
 
     return {
@@ -139,10 +176,11 @@ export function createRouter<const TRoutes extends readonly AnyRouteConfig[]>(in
   const siblingPaths = new Set<string>();
   const compiledRoutes = routes.map((route, index) => {
     const fullPath = normalizeRuntimePath(route.path);
-    if (siblingPaths.has(fullPath)) {
-      throw new Error(`Duplicate sibling route path detected: ${fullPath}`);
+    const siblingKey = normalizeRuntimePath(route.path);
+    if (siblingPaths.has(siblingKey)) {
+      throw new Error(`Duplicate sibling route path detected: ${siblingKey}`);
     }
-    siblingPaths.add(fullPath);
+    siblingPaths.add(siblingKey);
     return compileNode(route, "/", `${index}`);
   });
   return { routes, compiledRoutes };
@@ -181,10 +219,19 @@ function matchSegments(
       const paramName = optional ? rawName.slice(0, -1) : rawName;
 
       if (optional) {
+        if (currentSegment) {
+          const consumedParams = { ...params, [paramName]: decodeURIComponent(currentSegment) };
+          const consumed = tryMatch(routeIndex + 1, segmentIndex + 1, consumedParams);
+          if (consumed) {
+            return consumed;
+          }
+        }
+
         const skipped = tryMatch(routeIndex + 1, segmentIndex, params);
         if (skipped) {
           return skipped;
         }
+        return null;
       }
 
       if (!currentSegment) {

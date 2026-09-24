@@ -95,7 +95,7 @@ Each route supports:
 - On navigation, unchanged parent matches are reused.
 - Parent route render functions are not re-run when only child matches change.
 - Child rendering is handled by `<Outlet />`.
-- Query-string-only navigations update location/search, but currently reuse existing matched route entries and do not automatically re-run unchanged route loaders.
+- Query-string-only navigations re-run loaders for matched routes that define a loader so `location.search`-dependent data stays fresh.
 
 ## API
 
@@ -108,3 +108,5 @@ Each route supports:
 - `useLoaderData`
 - `useOutletContext`
 - `defineRoute` / `defineRoutes`
+- `matchPath` (throws when no route matches the provided pathname)
+- `buildPath` (throws when required path params are missing)

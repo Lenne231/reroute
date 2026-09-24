@@ -45,6 +45,7 @@ type RouteStateEntry = {
   params: Record<string, string>;
   loaderData: unknown;
   hasResolvedLoader: boolean;
+  locationKey: string;
   element?: ReactNode;
 };
 
@@ -96,6 +97,7 @@ async function resolveLoaders(
       previous &&
       previous.route === match.route &&
       isSameParams(previous.params, match.params) &&
+      (!match.route.route.loader || previous.locationKey === url.href) &&
       (previous.hasResolvedLoader || !match.route.route.loader)
     ) {
       nextEntries.push(previous);
@@ -115,7 +117,8 @@ async function resolveLoaders(
       route: match.route,
       params: match.params,
       loaderData,
-      hasResolvedLoader: true
+      hasResolvedLoader: true,
+      locationKey: url.href
     });
   }
 
@@ -164,7 +167,8 @@ export function RouterProvider<const TRoutes extends readonly AnyRouteConfig[]>(
       route: match.route,
       params: match.params,
       loaderData: undefined,
-      hasResolvedLoader: !match.route.route.loader
+      hasResolvedLoader: !match.route.route.loader,
+      locationKey: initialUrlRef.current.href
     }));
   });
   const [location, setLocation] = useState<URL>(initialUrlRef.current);
@@ -216,25 +220,27 @@ export function RouterProvider<const TRoutes extends readonly AnyRouteConfig[]>(
         }
       })();
     });
+
+    return controller;
   };
 
   useEffect(() => {
     if (!mountedRef.current) {
       mountedRef.current = true;
       previousRouterRef.current = router;
-      loadAndCommit(locationRef.current, entriesRef.current, router);
+      const controller = loadAndCommit(locationRef.current, entriesRef.current, router);
       return () => {
-        activeControllerRef.current?.abort();
+        controller.abort();
       };
     }
 
     if (previousRouterRef.current !== router) {
       previousRouterRef.current = router;
-      loadAndCommit(locationRef.current, entriesRef.current, router);
+      const controller = loadAndCommit(locationRef.current, entriesRef.current, router);
+      return () => {
+        controller.abort();
+      };
     }
-    return () => {
-      activeControllerRef.current?.abort();
-    };
   }, [router]);
 
   useEffect(() => {
@@ -243,7 +249,11 @@ export function RouterProvider<const TRoutes extends readonly AnyRouteConfig[]>(
     }
     initialPathRef.current = initialPath;
     const nextUrl = new URL(initialPath, "http://localhost");
-    loadAndCommit(nextUrl, entriesRef.current, router);
+    locationRef.current = nextUrl;
+    const controller = loadAndCommit(nextUrl, entriesRef.current, router);
+    return () => {
+      controller.abort();
+    };
   }, [initialPath, router]);
 
   const navigate = useCallback<NavigateFunction<TRoutes>>((to, ...args) => {

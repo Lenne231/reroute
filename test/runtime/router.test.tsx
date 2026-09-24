@@ -442,7 +442,7 @@ describe("router runtime", () => {
     expect(loaderCalls).toContain("?q=abc");
   });
 
-  it("does not rerun unchanged loader for query-only navigation", async () => {
+  it("reruns loader for query-only navigation", async () => {
     const loaderCalls: string[] = [];
     const routes = defineRoutes([
       {
@@ -483,7 +483,9 @@ describe("router runtime", () => {
     fireEvent.click(screen.getByText("Update search"));
     await flushPromises();
 
-    expect(screen.getByTestId("loaded-search").textContent).toBe("?q=one");
-    expect(loaderCalls).toEqual(["?q=one"]);
+    await waitFor(() => {
+      expect(screen.getByTestId("loaded-search").textContent).toBe("?q=two");
+    });
+    expect(loaderCalls).toEqual(["?q=one", "?q=two"]);
   });
 });

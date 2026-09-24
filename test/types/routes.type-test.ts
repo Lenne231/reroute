@@ -1,4 +1,42 @@
-import { LinkProps, RoutePaths, createReactRouter, defineRoutes, useNavigate } from "../../src";
+import { LinkProps, RoutePaths, createReactRouter, defineRoute, defineRoutes, useNavigate } from "../../src";
+
+const inferredRoutes = defineRoutes([
+  defineRoute({
+    path: "products/:productId",
+    loader: ({ params }) => {
+      const productId: string = params.productId;
+      // @ts-expect-error invalid inferred param key
+      const invalid = params.unknown;
+      void invalid;
+      return { productId, rating: 5 };
+    },
+    render: ({ params, loaderData }) => {
+      const productId: string = params.productId;
+      const fromLoader: string = loaderData.productId;
+      const rating: number = loaderData.rating;
+      // @ts-expect-error loader data shape is inferred from loader return type
+      const invalid = loaderData.missing;
+      void invalid;
+      return `${productId}-${fromLoader}-${rating}`;
+    },
+    children: [
+      defineRoute({
+        path: "reviews/:reviewId?",
+        loader: ({ params }) => {
+          const reviewId: string | undefined = params.reviewId;
+          return { reviewId };
+        },
+        render: ({ params, loaderData }) => {
+          const optionalReviewId: string | undefined = params.reviewId;
+          const fromLoader: string | undefined = loaderData.reviewId;
+          return `${optionalReviewId ?? "none"}-${fromLoader ?? "none"}`;
+        }
+      })
+    ]
+  })
+] as const);
+
+void inferredRoutes;
 
 const routes = defineRoutes([
   {
