@@ -1,5 +1,4 @@
-import { Outlet, defineRoutes, index, layout, path, lazyRoute } from "reroute";
-import { NavigationSpinner } from "./features/root/NavigationSpinner";
+import { defineRoutes, index, layout, path, lazyRoute } from "reroute";
 import { resolveFailRoute } from "./features/fail/route";
 import { resolveLegacyUsersRoute } from "./features/legacy-users/route";
 import { resolveRootLayout } from "./features/root/route";
