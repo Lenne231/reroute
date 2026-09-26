@@ -502,6 +502,64 @@ export type LinkProps<
   children?: ReactNode | ((state: LinkRenderState) => ReactNode);
 } & ParamsRequirement<TPath>;
 
+export type NavigateProps<
+  TRoutes extends readonly AnyRouteConfig[] = RegisteredRoutes,
+  TPath extends RoutePaths<TRoutes> = RoutePaths<TRoutes>,
+> = {
+  to: TPath;
+  search?: URLSearchParams | Record<string, string>;
+  replace?: boolean;
+} & ParamsRequirement<TPath>;
+
+export function Navigate<
+  TRoutes extends readonly AnyRouteConfig[] = RegisteredRoutes,
+  TPath extends RoutePaths<TRoutes> = RoutePaths<TRoutes>,
+>(props: NavigateProps<TRoutes, TPath>) {
+  const state = useContext(
+    RouterContext as React.Context<RouterState<TRoutes> | null>,
+  );
+  const navigate = useNavigate<TRoutes>();
+  const { to, search, replace = true } = props;
+  const params = (props as { params?: ParamsForPath<TPath> }).params;
+  const href = createHref(to, {
+    params,
+    search,
+  } as unknown as NavigateOptions<TPath>);
+  const navigatedHrefRef = useRef<string | null>(null);
+
+  if (!state) {
+    throw new Error("Navigate must be used inside RouterProvider");
+  }
+
+  useEffect(() => {
+    if (urlToHref(state.location) === href || state.pendingHref === href) {
+      return;
+    }
+
+    if (navigatedHrefRef.current === href) {
+      return;
+    }
+
+    navigatedHrefRef.current = href;
+    navigate(to, {
+      params,
+      search,
+      replace,
+    } as unknown as NavigateOptions<TPath>);
+  }, [
+    href,
+    navigate,
+    params,
+    replace,
+    search,
+    state.location,
+    state.pendingHref,
+    to,
+  ]);
+
+  return null;
+}
+
 export function Link<
   TRoutes extends readonly AnyRouteConfig[] = RegisteredRoutes,
   TPath extends RoutePaths<TRoutes> = RoutePaths<TRoutes>,

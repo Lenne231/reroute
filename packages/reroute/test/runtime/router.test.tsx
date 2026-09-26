@@ -9,6 +9,7 @@ import React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   Link,
+  Navigate,
   Outlet,
   RouterProvider,
   createReactRouter,
@@ -744,5 +745,42 @@ describe("router runtime", () => {
       expect(screen.getByTestId("error-message").textContent).toBe("boom");
     });
     expect(window.location.pathname).toBe("/boom");
+  });
+
+  it("supports resolver redirect via Navigate component", async () => {
+    const routes = defineRoutes([
+      {
+        path: "",
+        resolve: () => <Outlet />,
+        children: [
+          {
+            path: "legacy",
+            resolve: () => (
+              <Navigate<typeof routes, "/users/:id">
+                to="/users/:id"
+                params={{ id: "2" }}
+              />
+            ),
+          },
+          {
+            path: "users/:id",
+            resolve: () => <RedirectTargetPage />,
+          },
+        ],
+      },
+    ] as const);
+
+    function RedirectTargetPage() {
+      const params = useParams<{ id: string }>();
+      return <p data-testid="redirect-id">{params.id}</p>;
+    }
+
+    const router = createReactRouter(routes);
+    render(<RouterProvider router={router} initialPath="/legacy" />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("redirect-id").textContent).toBe("2");
+    });
+    expect(window.location.pathname).toBe("/users/2");
   });
 });

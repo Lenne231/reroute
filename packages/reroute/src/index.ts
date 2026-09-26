@@ -27,6 +27,7 @@ export type {
 export {
   RouterProvider,
   Outlet,
+  Navigate,
   Link,
   useIsNavigating,
   useNavigate,
@@ -37,6 +38,7 @@ export {
 export type {
   LinkProps,
   LinkRenderState,
+  NavigateProps,
   RouterErrorBoundaryRenderArgs,
   RouterErrorBoundaryRenderer,
 } from "./react/router";

@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import {
+  Navigate,
   Outlet,
   defineRoutes,
   index,
@@ -59,15 +60,20 @@ async function resolveRootLayout() {
   return <RootLayout message={message} />;
 }
 
-async function resolveFailRoute() {
+async function resolveFailRoute(): Promise<never> {
   console.log("Resolve fail route");
   await new Promise((resolve) => setTimeout(resolve, 700));
   throw new Error("Intentional demo error from /fail");
 }
 
+function resolveLegacyUsersRoute() {
+  return <Navigate to="/users" replace />;
+}
+
 export const routes = defineRoutes([
   layout(resolveRootLayout, [
     index(resolveHomeRoute),
+    path("legacy-users", resolveLegacyUsersRoute),
     path("fail", resolveFailRoute),
     usersRoutes,
   ]),

@@ -54,6 +54,10 @@ export async function resolveUsersListRoute() {
       <Link to="/users/create" className={getLinkClassName}>
         {(state) => renderLabel("Create user", state)}
       </Link>
+      <br />
+      <Link to="/users/:id" params={{ id: "999" }} className={getLinkClassName}>
+        {(state) => renderLabel("User not found demo", state)}
+      </Link>
     </div>
   );
 }

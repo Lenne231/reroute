@@ -48,6 +48,24 @@ export function resolveHomeRoute() {
           return "Trigger fail route";
         }}
       </Link>
+      <br />
+      <Link to="/legacy-users" className={getLinkClassName}>
+        {({ isActive, isNavigating }) => {
+          if (isNavigating) {
+            return "Redirect demo (loading...)";
+          }
+
+          if (isActive) {
+            return "Redirect demo (active)";
+          }
+
+          return "Redirect demo";
+        }}
+      </Link>
+      <br />
+      <a href="/not-found-demo" className="nav-link">
+        Trigger 404 demo
+      </a>
     </div>
   );
 }
