@@ -1,4 +1,10 @@
-import { cleanup, render, screen, fireEvent, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+} from "@testing-library/react";
 import React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
@@ -8,8 +14,7 @@ import {
   createReactRouter,
   defineRoutes,
   useNavigate,
-  useOutletContext,
-  useParams
+  useParams,
 } from "../../src";
 
 function flushPromises() {
@@ -34,37 +39,43 @@ afterEach(() => {
 });
 
 describe("router runtime", () => {
-  it("matches nested routes and runs loaders", async () => {
-    const userLoader = vi.fn(async ({ params }: { params: Record<string, string> }) => ({
-      id: params.id,
-      name: "Ada"
-    }));
+  it("matches nested routes and resolves async route nodes", async () => {
+    const userResolve = vi.fn(
+      async ({ params }: { params: Record<string, string> }) => ({
+        id: params.id,
+        name: "Ada",
+      }),
+    );
 
     const routes = defineRoutes([
       {
         path: "",
-        render: () => (
+        resolve: () => (
           <div>
             <h1>Root</h1>
-            <Outlet context={{ fromRoot: true }} />
+            <Outlet />
           </div>
         ),
         children: [
           {
             path: "users/:id",
-            loader: userLoader,
-            render: ({ loaderData }) => <UserDetails user={loaderData as { id: string; name: string }} />
-          }
-        ]
-      }
+            resolve: async ({ params }) => {
+              const user = await userResolve({ params } as {
+                params: Record<string, string>;
+              });
+              return (
+                <UserDetails user={user as { id: string; name: string }} />
+              );
+            },
+          },
+        ],
+      },
     ] as const);
 
     function UserDetails({ user }: { user: { id: string; name: string } }) {
-      const parent = useOutletContext<{ fromRoot: boolean }>();
       return (
         <div>
           <p data-testid="user-id">{user.id}</p>
-          <p data-testid="root-context">{String(parent.fromRoot)}</p>
         </div>
       );
     }
@@ -76,8 +87,7 @@ describe("router runtime", () => {
       expect(screen.getByTestId("user-id").textContent).toBe("42");
     });
 
-    expect(screen.getByTestId("root-context").textContent).toBe("true");
-    expect(userLoader).toHaveBeenCalledTimes(1);
+    expect(userResolve).toHaveBeenCalledTimes(1);
   });
 
   it("navigates with Link and keeps parent render stable", async () => {
@@ -91,14 +101,14 @@ describe("router runtime", () => {
     const routes = defineRoutes([
       {
         path: "",
-        render: parentRender,
+        resolve: parentRender,
         children: [
           {
             path: "users/:id",
-            render: () => <UserPage />
-          }
-        ]
-      }
+            resolve: () => <UserPage />,
+          },
+        ],
+      },
     ] as const);
 
     function UserPage() {
@@ -106,7 +116,10 @@ describe("router runtime", () => {
       return (
         <div>
           <p data-testid="id">{params.id}</p>
-          <Link<typeof routes, "/users/:id"> to="/users/:id" params={{ id: "2" }}>
+          <Link<typeof routes, "/users/:id">
+            to="/users/:id"
+            params={{ id: "2" }}
+          >
             Next
           </Link>
         </div>
@@ -134,18 +147,18 @@ describe("router runtime", () => {
     const routes = defineRoutes([
       {
         path: "",
-        render: () => <Outlet />,
+        resolve: () => <Outlet />,
         children: [
           {
             path: "a",
-            render: () => <NavigateButton />
+            resolve: () => <NavigateButton />,
           },
           {
             path: "b/:slug",
-            render: () => <SlugPage />
-          }
-        ]
-      }
+            resolve: () => <SlugPage />,
+          },
+        ],
+      },
     ] as const);
 
     function SlugPage() {
@@ -185,14 +198,14 @@ describe("router runtime", () => {
     const routes = defineRoutes([
       {
         path: "",
-        render: () => <Outlet />,
+        resolve: () => <Outlet />,
         children: [
           {
             path: "users/:id",
-            render: () => <GuardedLinkPage />
-          }
-        ]
-      }
+            resolve: () => <GuardedLinkPage />,
+          },
+        ],
+      },
     ] as const);
 
     function GuardedLinkPage() {
@@ -200,7 +213,10 @@ describe("router runtime", () => {
       return (
         <div>
           <p data-testid="id">{params.id}</p>
-          <Link<typeof routes, "/users/:id"> to="/users/:id" params={{ id: "2" }}>
+          <Link<typeof routes, "/users/:id">
+            to="/users/:id"
+            params={{ id: "2" }}
+          >
             Modified click
           </Link>
           <Link<typeof routes, "/users/:id">
@@ -230,39 +246,46 @@ describe("router runtime", () => {
     expect(screen.getByTestId("id").textContent).toBe("1");
   });
 
-  it("ignores stale loader completions after rapid navigation", async () => {
+  it("ignores stale resolve completions after rapid navigation", async () => {
     const deferredMap = new Map<string, Deferred<{ id: string }>>();
 
     const routes = defineRoutes([
       {
         path: "",
-        render: () => <Outlet />,
+        resolve: () => <Outlet />,
         children: [
           {
             path: "start",
-            render: () => <StartPage />
+            resolve: () => <StartPage />,
           },
           {
             path: "data/:id",
-            loader: ({ params }) => {
+            resolve: ({ params }) => {
               const deferred = createDeferred<{ id: string }>();
               deferredMap.set(params.id, deferred);
-              return deferred.promise;
+              return deferred.promise.then((data) => (
+                <p data-testid="loaded-id">{data.id}</p>
+              ));
             },
-            render: ({ loaderData }) => <p data-testid="loaded-id">{(loaderData as { id: string }).id}</p>
-          }
-        ]
-      }
+          },
+        ],
+      },
     ] as const);
 
     function StartPage() {
       const navigate = useNavigate<typeof routes>();
       return (
         <div>
-          <button type="button" onClick={() => navigate("/data/:id", { params: { id: "1" } })}>
+          <button
+            type="button"
+            onClick={() => navigate("/data/:id", { params: { id: "1" } })}
+          >
             Load 1
           </button>
-          <button type="button" onClick={() => navigate("/data/:id", { params: { id: "2" } })}>
+          <button
+            type="button"
+            onClick={() => navigate("/data/:id", { params: { id: "2" } })}
+          >
             Load 2
           </button>
         </div>
@@ -290,39 +313,43 @@ describe("router runtime", () => {
     expect(screen.getByTestId("loaded-id").textContent).toBe("2");
   });
 
-  it("ignores stale loader completions after router prop swap", async () => {
+  it("ignores stale resolve completions after router prop swap", async () => {
     const deferred = createDeferred<{ id: string }>();
 
     const routesA = defineRoutes([
       {
         path: "",
-        render: () => <Outlet />,
+        resolve: () => <Outlet />,
         children: [
           {
             path: "data",
-            loader: () => deferred.promise,
-            render: ({ loaderData }) => <p data-testid="value">{(loaderData as { id: string }).id}</p>
-          }
-        ]
-      }
+            resolve: () =>
+              deferred.promise.then((data) => (
+                <p data-testid="value">{data.id}</p>
+              )),
+          },
+        ],
+      },
     ] as const);
 
     const routesB = defineRoutes([
       {
         path: "",
-        render: () => <Outlet />,
+        resolve: () => <Outlet />,
         children: [
           {
             path: "data",
-            render: () => <p data-testid="value">new-router</p>
-          }
-        ]
-      }
+            resolve: () => <p data-testid="value">new-router</p>,
+          },
+        ],
+      },
     ] as const);
 
     const routerA = createReactRouter(routesA);
     const routerB = createReactRouter(routesB);
-    const rendered = render(<RouterProvider router={routerA} initialPath="/data" />);
+    const rendered = render(
+      <RouterProvider router={routerA} initialPath="/data" />,
+    );
 
     rendered.rerender(<RouterProvider router={routerB} initialPath="/data" />);
 
@@ -330,7 +357,7 @@ describe("router runtime", () => {
       expect(screen.getByTestId("value").textContent).toBe("new-router");
     });
 
-    deferred.resolve({ id: "old-loader" });
+    deferred.resolve({ id: "old-resolve" });
     await flushPromises();
     expect(screen.getByTestId("value").textContent).toBe("new-router");
   });
@@ -339,14 +366,14 @@ describe("router runtime", () => {
     const routes = defineRoutes([
       {
         path: "",
-        render: () => <Outlet />,
+        resolve: () => <Outlet />,
         children: [
           {
             path: ":first?/:second",
-            render: () => <OptionalParamsPage />
-          }
-        ]
-      }
+            resolve: () => <OptionalParamsPage />,
+          },
+        ],
+      },
     ] as const);
 
     function OptionalParamsPage() {
@@ -372,16 +399,18 @@ describe("router runtime", () => {
     const routes = defineRoutes([
       {
         path: "",
-        render: () => <Outlet />,
+        resolve: () => <Outlet />,
         children: [
-          { path: "a", render: () => <p data-testid="path-value">a</p> },
-          { path: "b", render: () => <p data-testid="path-value">b</p> }
-        ]
-      }
+          { path: "a", resolve: () => <p data-testid="path-value">a</p> },
+          { path: "b", resolve: () => <p data-testid="path-value">b</p> },
+        ],
+      },
     ] as const);
 
     const router = createReactRouter(routes);
-    const rendered = render(<RouterProvider router={router} initialPath="/a" />);
+    const rendered = render(
+      <RouterProvider router={router} initialPath="/a" />,
+    );
 
     await waitFor(() => {
       expect(screen.getByTestId("path-value").textContent).toBe("a");
@@ -394,33 +423,35 @@ describe("router runtime", () => {
     });
   });
 
-  it("passes search to navigation and loaders", async () => {
-    const loaderCalls: string[] = [];
+  it("passes search to navigation and resolve", async () => {
+    const searchCalls: string[] = [];
     const routes = defineRoutes([
       {
         path: "",
-        render: () => <Outlet />,
+        resolve: () => <Outlet />,
         children: [
           {
             path: "from",
-            render: () => <SearchNavigatePage />
+            resolve: () => <SearchNavigatePage />,
           },
           {
             path: "to",
-            loader: ({ location }) => {
-              loaderCalls.push(location.search);
-              return { search: location.search };
+            resolve: ({ location }) => {
+              searchCalls.push(location.search);
+              return <p data-testid="search-value">{location.search}</p>;
             },
-            render: ({ loaderData }) => <p data-testid="search-value">{(loaderData as { search: string }).search}</p>
-          }
-        ]
-      }
+          },
+        ],
+      },
     ] as const);
 
     function SearchNavigatePage() {
       const navigate = useNavigate<typeof routes>();
       return (
-        <button type="button" onClick={() => navigate("/to", { search: { q: "abc" } })}>
+        <button
+          type="button"
+          onClick={() => navigate("/to", { search: { q: "abc" } })}
+        >
           Navigate with search
         </button>
       );
@@ -439,34 +470,36 @@ describe("router runtime", () => {
     await waitFor(() => {
       expect(screen.getByTestId("search-value").textContent).toBe("?q=abc");
     });
-    expect(loaderCalls).toContain("?q=abc");
+    expect(searchCalls).toContain("?q=abc");
   });
 
-  it("reruns loader for query-only navigation", async () => {
-    const loaderCalls: string[] = [];
+  it("reruns resolve for query-only navigation", async () => {
+    const searchCalls: string[] = [];
     const routes = defineRoutes([
       {
         path: "",
-        render: () => <Outlet />,
+        resolve: () => <Outlet />,
         children: [
           {
             path: "search",
-            loader: ({ location }) => {
-              loaderCalls.push(location.search);
-              return { search: location.search };
+            resolve: ({ location }) => {
+              searchCalls.push(location.search);
+              return <SearchPage search={location.search} />;
             },
-            render: ({ loaderData }) => <SearchPage search={loaderData as { search: string }} />
-          }
-        ]
-      }
+          },
+        ],
+      },
     ] as const);
 
-    function SearchPage({ search }: { search: { search: string } }) {
+    function SearchPage({ search }: { search: string }) {
       const navigate = useNavigate<typeof routes>();
       return (
         <div>
-          <p data-testid="loaded-search">{search.search}</p>
-          <button type="button" onClick={() => navigate("/search", { search: { q: "two" } })}>
+          <p data-testid="loaded-search">{search}</p>
+          <button
+            type="button"
+            onClick={() => navigate("/search", { search: { q: "two" } })}
+          >
             Update search
           </button>
         </div>
@@ -486,6 +519,90 @@ describe("router runtime", () => {
     await waitFor(() => {
       expect(screen.getByTestId("loaded-search").textContent).toBe("?q=two");
     });
-    expect(loaderCalls).toEqual(["?q=one", "?q=two"]);
+    expect(searchCalls).toEqual(["?q=one", "?q=two"]);
+  });
+
+  it("syncs browser URL and supports replace navigation", async () => {
+    const routes = defineRoutes([
+      {
+        path: "",
+        resolve: () => <Outlet />,
+        children: [
+          {
+            path: "a",
+            resolve: () => <NavigateWithReplacePage />,
+          },
+          {
+            path: "b",
+            resolve: () => <p data-testid="page">b</p>,
+          },
+          {
+            path: "c",
+            resolve: () => <p data-testid="page">c</p>,
+          },
+        ],
+      },
+    ] as const);
+
+    function NavigateWithReplacePage() {
+      const navigate = useNavigate<typeof routes>();
+      return (
+        <div>
+          <button type="button" onClick={() => navigate("/b")}>
+            Push b
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate("/c", { replace: true })}
+          >
+            Replace c
+          </button>
+          <Link<typeof routes, "/b"> to="/b" replace>
+            Link replace b
+          </Link>
+        </div>
+      );
+    }
+
+    window.history.replaceState(null, "", "/a");
+    const pushStateSpy = vi.spyOn(window.history, "pushState");
+    const replaceStateSpy = vi.spyOn(window.history, "replaceState");
+
+    const router = createReactRouter(routes);
+    const rendered = render(<RouterProvider router={router} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Push b")).toBeDefined();
+    });
+
+    fireEvent.click(screen.getByText("Push b"));
+    await waitFor(() => {
+      expect(screen.getByTestId("page").textContent).toBe("b");
+    });
+    expect(window.location.pathname).toBe("/b");
+    expect(pushStateSpy).toHaveBeenCalled();
+
+    window.history.replaceState(null, "", "/a");
+    rendered.rerender(<RouterProvider router={router} initialPath="/a" />);
+    await waitFor(() => {
+      expect(screen.getByText("Replace c")).toBeDefined();
+    });
+    fireEvent.click(screen.getByText("Replace c"));
+    await waitFor(() => {
+      expect(screen.getByTestId("page").textContent).toBe("c");
+    });
+    expect(window.location.pathname).toBe("/c");
+    expect(replaceStateSpy).toHaveBeenCalled();
+
+    window.history.pushState(null, "", "/a");
+    window.dispatchEvent(new PopStateEvent("popstate"));
+    await waitFor(() => {
+      expect(screen.getByText("Link replace b")).toBeDefined();
+    });
+    fireEvent.click(screen.getByText("Link replace b"));
+    await waitFor(() => {
+      expect(screen.getByTestId("page").textContent).toBe("b");
+    });
+    expect(window.location.pathname).toBe("/b");
   });
 });

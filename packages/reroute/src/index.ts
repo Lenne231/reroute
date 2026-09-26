@@ -2,34 +2,38 @@ export {
   createRouter,
   defineRoute,
   defineRoutes,
+  index,
+  path,
+  layout,
   buildPath,
-  matchPath
+  matchPath,
 } from "./core/router";
 
 export type {
   AnyRouteConfig,
   CompiledRoute,
-  LoaderFn,
-  LoaderArgs,
-  LoaderResult,
+  Register,
+  RegisteredRoutes,
+  RouteProps,
+  ResolveFn,
+  ResolveArgs,
   RouteConfig,
   RouteMatch,
   RoutePaths,
-  Router
+  Router,
 } from "./core/router";
 
 export {
   RouterProvider,
   Outlet,
   Link,
-  useLoaderData,
+  useIsNavigating,
   useNavigate,
-  useOutletContext,
   useParams,
-  createReactRouter
+  createReactRouter,
 } from "./react/router";
 
-export type { LinkProps } from "./react/router";
+export type { LinkProps, LinkRenderState } from "./react/router";
 export type {
   ParamsForPath,
   HasParams,
@@ -38,5 +42,5 @@ export type {
   JoinPath,
   ExtractParamNames,
   ExtractOptionalParamNames,
-  ExtractRequiredParamNames
+  ExtractRequiredParamNames,
 } from "./types";

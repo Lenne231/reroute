@@ -1,6 +1,6 @@
 # reroute
 
-A type-safe React router with nested route config, typed links/navigation, route loaders, and outlet-based composition.
+A type-safe React router with nested route config, typed links/navigation, async route resolution, and outlet-based composition.
 
 ## Features
 
@@ -8,15 +8,34 @@ A type-safe React router with nested route config, typed links/navigation, route
 - Route path autocomplete for `Link` and `useNavigate`.
 - Compile-time param enforcement for dynamic routes (`/users/:id`).
 - Nested route matching with a route stack.
-- Loader execution per route with params + location.
+- Async route resolution per route with params + location.
 - Transition-safe navigation with `startTransition`.
-- `Outlet` + `useOutletContext` for child route composition.
-- Parent route render reuse when parent match did not change.
+- `Outlet` for child route composition.
+- Parent route resolve reuse when parent match did not change.
 
 ## Install
 
 ```bash
 npm install reroute
+```
+
+## Run the example app
+
+This repository includes a runnable Vite example package in [packages/example/package.json](packages/example/package.json).
+
+```bash
+cd packages/example
+pnpm install
+pnpm run dev
+```
+
+Then open the URL printed by Vite (usually http://localhost:5173).
+
+You can also run it from the repository root:
+
+```bash
+pnpm install
+pnpm run example:dev
 ```
 
 ## Quick start
@@ -28,26 +47,34 @@ import {
   RouterProvider,
   createReactRouter,
   defineRoutes,
-  useNavigate
+  useNavigate,
 } from "reroute";
 
 const routes = defineRoutes([
   {
     path: "",
-    render: () => <Outlet />,
+    resolve: () => <Outlet />,
     children: [
       {
         path: "users/:id",
-        loader: async ({ params }) => ({ id: params.id, name: `User ${params.id}` }),
-        render: ({ params, loaderData }) => <UserPage params={params} user={loaderData} />
-      }
-    ]
-  }
+        resolve: async ({ params }) => {
+          const user = { id: params.id, name: `User ${params.id}` };
+          return <UserPage params={params} user={user} />;
+        },
+      },
+    ],
+  },
 ] as const);
 
 const router = createReactRouter(routes);
 
-function UserPage({ params, user }: { params: { id: string }; user: { id: string; name: string } }) {
+function UserPage({
+  params,
+  user,
+}: {
+  params: { id: string };
+  user: { id: string; name: string };
+}) {
   const navigate = useNavigate<typeof routes>();
   return (
     <div>
@@ -56,7 +83,9 @@ function UserPage({ params, user }: { params: { id: string }; user: { id: string
       <Link<typeof routes, "/users/:id"> to="/users/:id" params={{ id: "2" }}>
         Go to user 2
       </Link>
-      <button onClick={() => navigate("/users/:id", { params: { id: "3" } })}>Go to user 3</button>
+      <button onClick={() => navigate("/users/:id", { params: { id: "3" } })}>
+        Go to user 3
+      </button>
     </div>
   );
 }
@@ -70,17 +99,25 @@ export function App() {
 
 Use `defineRoutes([...])` with nested `children` to describe the full route tree.
 
+You can also use helpers for clearer intent:
+
+- `layout(routeFn, children)`
+- `layout(path, routeFn, children)`
+- `path(path, routeFn, children?)`
+- `index(routeFn, children?)`
+
 Each route supports:
 
 - `path`
-- optional `loader`
-- `render`
+- `resolve` (sync or async)
 - optional `children`
 
-`render` receives:
+`resolve` receives:
 
 - `params`: params parsed from the route pattern
-- `loaderData`: resolved loader data for the route
+- `location`: the current URL object
+- `signal`: abort signal for canceled navigations
+- `context`: user context (reserved for future use)
 
 ## Type safety details
 
@@ -89,13 +126,43 @@ Each route supports:
 - `Link` and `navigate` require `params` when a route has required params, and allow omitting `params` when all params are optional.
 - `Link` and `navigate` reject `params` for static routes.
 
+### Central Route Types With declare
+
+If you want to avoid repeating route generics like Link<typeof routes, ...>,
+register your route tree once with module augmentation.
+
+Create a declaration file in your app (for example reroute.d.ts):
+
+```ts
+import type { routes } from "./src/app/routes";
+
+declare module "reroute" {
+  interface Register {
+    routes: typeof routes;
+  }
+}
+```
+
+Then you can write:
+
+```tsx
+<Link to="/users/create">Create user</Link>
+```
+
+and:
+
+```tsx
+const navigate = useNavigate();
+navigate("/users/:id", { params: { id: "42" } });
+```
+
 ## Runtime behavior
 
 - A route stack is maintained from root to deepest matched route.
 - On navigation, unchanged parent matches are reused.
-- Parent route render functions are not re-run when only child matches change.
+- Parent route resolve functions are not re-run when only child params change.
 - Child rendering is handled by `<Outlet />`.
-- Query-string-only navigations re-run loaders for matched routes that define a loader so `location.search`-dependent data stays fresh.
+- Query-string-only navigations re-run resolve functions for matched routes so `location.search`-dependent UI stays fresh.
 
 ## API
 
@@ -105,8 +172,7 @@ Each route supports:
 - `Outlet`
 - `useNavigate`
 - `useParams`
-- `useLoaderData`
-- `useOutletContext`
 - `defineRoute` / `defineRoutes`
+- `layout` / `path` / `index`
 - `matchPath` (throws when no route matches the provided pathname)
 - `buildPath` (throws when required path params are missing)

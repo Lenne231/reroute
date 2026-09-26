@@ -1,62 +1,81 @@
-import { LinkProps, RoutePaths, createReactRouter, defineRoute, defineRoutes, useNavigate } from "../../src";
+import {
+  LinkProps,
+  RoutePaths,
+  createReactRouter,
+  defineRoute,
+  defineRoutes,
+  index,
+  layout,
+  path,
+  useNavigate,
+} from "../../src";
 
 const inferredRoutes = defineRoutes([
   defineRoute({
     path: "products/:productId",
-    loader: ({ params }) => {
+    resolve: ({ params }) => {
       const productId: string = params.productId;
       // @ts-expect-error invalid inferred param key
       const invalid = params.unknown;
       void invalid;
-      return { productId, rating: 5 };
-    },
-    render: ({ params, loaderData }) => {
-      const productId: string = params.productId;
-      const fromLoader: string = loaderData.productId;
-      const rating: number = loaderData.rating;
-      // @ts-expect-error loader data shape is inferred from loader return type
-      const invalid = loaderData.missing;
-      void invalid;
-      return `${productId}-${fromLoader}-${rating}`;
+      return `Product ${productId}`;
     },
     children: [
       defineRoute({
         path: "reviews/:reviewId?",
-        loader: ({ params }) => {
+        resolve: ({ params }) => {
           const reviewId: string | undefined = params.reviewId;
-          return { reviewId };
-        },
-        render: ({ params, loaderData }) => {
           const optionalReviewId: string | undefined = params.reviewId;
-          const fromLoader: string | undefined = loaderData.reviewId;
-          return `${optionalReviewId ?? "none"}-${fromLoader ?? "none"}`;
-        }
-      })
-    ]
-  })
+          return `${optionalReviewId ?? "none"}-${reviewId ?? "none"}`;
+        },
+      }),
+    ],
+  }),
 ] as const);
 
 void inferredRoutes;
 
+const helperRoutes = defineRoutes([
+  layout(
+    () => null,
+    [
+      index(({ params }) => {
+        const keys = Object.keys(params);
+        const count: number = keys.length;
+        return String(count);
+      }),
+      path("teams/:teamId", ({ params }) => {
+        const teamId: string = params.teamId;
+        // @ts-expect-error invalid inferred param key
+        const invalid = params.missing;
+        void invalid;
+        return teamId;
+      }),
+    ],
+  ),
+] as const);
+
+void helperRoutes;
+
 const routes = defineRoutes([
   {
     path: "",
-    render: () => null,
+    resolve: () => null,
     children: [
       {
         path: "users/:id",
-        render: () => null
+        resolve: () => null,
       },
       {
         path: "about",
-        render: () => null
+        resolve: () => null,
       },
       {
         path: "posts/:slug?",
-        render: () => null
-      }
-    ]
-  }
+        resolve: () => null,
+      },
+    ],
+  },
 ] as const);
 
 const router = createReactRouter(routes);
@@ -68,31 +87,31 @@ const pathC: Paths = "/posts/:slug?";
 
 const linkOk: LinkProps<typeof routes, "/users/:id"> = {
   to: pathA,
-  params: { id: "123" }
+  params: { id: "123" },
 };
 
 const linkNoParams: LinkProps<typeof routes, "/about"> = {
-  to: pathB
+  to: pathB,
 };
 
 const optionalParamsMissing: LinkProps<typeof routes, "/posts/:slug?"> = {
-  to: pathC
+  to: pathC,
 };
 
 const optionalParamsProvided: LinkProps<typeof routes, "/posts/:slug?"> = {
   to: pathC,
-  params: { slug: "hello" }
+  params: { slug: "hello" },
 };
 
 // @ts-expect-error required route params missing
 const linkMissing: LinkProps<typeof routes, "/users/:id"> = {
-  to: pathA
+  to: pathA,
 };
 
 const linkUnexpectedParams: LinkProps<typeof routes, "/about"> = {
   to: pathB,
   // @ts-expect-error params not allowed for route without params
-  params: { id: "x" }
+  params: { id: "x" },
 };
 
 void linkOk;

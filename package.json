@@ -1,45 +1,13 @@
 {
-  "name": "reroute",
-  "version": "0.1.0",
-  "description": "Type-safe React router with typed route params and nested route config",
-  "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
-    }
-  },
-  "files": [
-    "dist"
-  ],
+  "name": "reroute-workspace",
+  "private": true,
+  "packageManager": "pnpm@9.12.2",
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
-    "test": "vitest run",
-    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit test/types/routes.type-test.ts --module ESNext --moduleResolution Bundler --jsx react-jsx --strict --skipLibCheck --types node"
-  },
-  "keywords": [
-    "router",
-    "react",
-    "typescript"
-  ],
-  "author": "",
-  "license": "MIT",
-  "peerDependencies": {
-    "react": ">=18",
-    "react-dom": ">=18"
-  },
-  "devDependencies": {
-    "@testing-library/jest-dom": "^7.0.1",
-    "@testing-library/react": "^16.3.3",
-    "@types/node": "^26.6.2",
-    "@types/react": "^19.3.0",
-    "@types/react-dom": "^19.3.0",
-    "jsdom": "^30.1.1",
-    "react": "^19.3.0",
-    "react-dom": "^19.3.0",
-    "typescript": "^5.6.3",
-    "vitest": "^5.0.1"
+    "build": "pnpm --filter reroute build",
+    "typecheck": "pnpm --filter reroute typecheck",
+    "test": "pnpm --filter reroute test",
+    "example:dev": "pnpm --filter reroute-example dev",
+    "example:build": "pnpm --filter reroute-example build",
+    "example:preview": "pnpm --filter reroute-example preview"
   }
 }

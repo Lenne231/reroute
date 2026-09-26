@@ -1,0 +1,23 @@
+{
+  "name": "reroute-example",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm --dir ../reroute run build && vite",
+    "build": "pnpm --dir ../reroute run build && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "reroute": "workspace:*",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^5.1.0",
+    "typescript": "^5.6.3",
+    "vite": "^7.1.7"
+  }
+}
