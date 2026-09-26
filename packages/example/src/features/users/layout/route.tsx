@@ -1,10 +1,5 @@
-import { Outlet } from "reroute";
+import { UsersLayout } from "./UsersLayout";
 
 export default function resolveUsersLayoutRoute() {
-  return (
-    <div>
-      <h2>Users</h2>
-      <Outlet />
-    </div>
-  );
+  return <UsersLayout />;
 }
