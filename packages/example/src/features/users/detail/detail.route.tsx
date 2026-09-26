@@ -44,12 +44,16 @@ function UserDetailsPage({
   );
 }
 
-export async function resolveUserDetailRoute({ params }: RouteProps<":id">) {
+export async function resolveUserDetailRoute({
+  params,
+  setStatusCode,
+}: RouteProps<":id">) {
   console.log("Resolve user id route", params.id);
   await new Promise((resolve) => setTimeout(resolve, 500));
 
   const user = users.find((candidate) => candidate.id === params.id);
   if (!user) {
+    setStatusCode(404);
     return <UserNotFoundPage id={params.id} />;
   }
 

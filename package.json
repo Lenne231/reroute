@@ -7,7 +7,11 @@
     "typecheck": "pnpm --filter reroute typecheck",
     "test": "pnpm --filter reroute test",
     "example:dev": "pnpm --filter reroute-example dev",
+    "example:dev:spa": "pnpm --filter reroute-example dev:spa",
+    "example:ssr:dev": "pnpm --filter reroute-example dev:ssr",
     "example:build": "pnpm --filter reroute-example build",
-    "example:preview": "pnpm --filter reroute-example preview"
+    "example:preview": "pnpm --filter reroute-example preview",
+    "example:ssr:build": "pnpm --filter reroute-example build:ssr",
+    "example:ssr:preview": "pnpm --filter reroute-example preview:ssr"
   }
 }

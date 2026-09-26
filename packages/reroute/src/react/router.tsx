@@ -56,6 +56,11 @@ type RouteStateEntry = {
   element?: ReactNode;
 };
 
+export type RouterResolvedEntry = RouteStateEntry & {
+  hasResolved: true;
+  element: ReactNode;
+};
+
 type RouterState<TRoutes extends readonly AnyRouteConfig[]> = {
   router: Router<TRoutes>;
   entries: RouteStateEntry[];
@@ -75,6 +80,34 @@ export type RouterErrorBoundaryRenderArgs = {
 export type RouterErrorBoundaryRenderer =
   | ReactNode
   | ((args: RouterErrorBoundaryRenderArgs) => ReactNode);
+
+export async function resolveInitialRouteState<
+  const TRoutes extends readonly AnyRouteConfig[],
+>(router: Router<TRoutes>, url: URL) {
+  const matches = tryMatchPath(router.compiledRoutes, url.pathname);
+  if (!matches) {
+    return {
+      entries: [] as RouterResolvedEntry[],
+      statusCode: 404,
+    };
+  }
+
+  let statusCode = 200;
+  const entries = (await resolveEntries(
+    undefined,
+    matches,
+    url,
+    new AbortController().signal,
+    (nextStatusCode) => {
+      statusCode = nextStatusCode;
+    },
+  )) as RouterResolvedEntry[];
+
+  return {
+    entries,
+    statusCode,
+  };
+}
 
 function urlToHref(url: URL): string {
   return `${url.pathname}${url.search}`;
@@ -137,6 +170,7 @@ async function resolveEntries(
   nextMatches: Array<{ route: CompiledRoute; params: Record<string, string> }>,
   url: URL,
   signal: AbortSignal,
+  setStatusCode: (statusCode: number) => void,
 ): Promise<RouteStateEntry[]> {
   const nextEntries: RouteStateEntry[] = [];
 
@@ -159,6 +193,7 @@ async function resolveEntries(
       location: url,
       context: undefined,
       signal,
+      setStatusCode,
     });
 
     nextEntries.push({
@@ -182,12 +217,14 @@ export function RouterProvider<
 >({
   router,
   initialPath,
+  initialEntries,
   fallback,
   notFound,
   errorBoundary,
 }: {
   router: Router<TRoutes>;
   initialPath?: string;
+  initialEntries?: RouterResolvedEntry[];
   fallback?: ReactNode;
   notFound?: NotFoundRenderer;
   errorBoundary?: RouterErrorBoundaryRenderer;
@@ -201,6 +238,10 @@ export function RouterProvider<
     new URL(resolvedInitialPath, "http://localhost"),
   );
   const [entries, setEntries] = useState<RouteStateEntry[]>(() => {
+    if (initialEntries) {
+      return initialEntries;
+    }
+
     const matches = tryMatchPath(
       router.compiledRoutes,
       initialUrlRef.current.pathname,
@@ -224,6 +265,7 @@ export function RouterProvider<
   const initialPathRef = useRef(initialPath);
   const navigationCounterRef = useRef(0);
   const activeControllerRef = useRef<AbortController | null>(null);
+  const mountedRef = useRef(false);
 
   useEffect(() => {
     entriesRef.current = entries;
@@ -272,6 +314,7 @@ export function RouterProvider<
             matches,
             nextUrl,
             controller.signal,
+            () => {},
           );
           if (
             navigationCounterRef.current !== requestId ||
@@ -304,6 +347,13 @@ export function RouterProvider<
   };
 
   useEffect(() => {
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      if (initialEntries) {
+        return;
+      }
+    }
+
     const controller = loadAndCommit(
       locationRef.current,
       entriesRef.current,

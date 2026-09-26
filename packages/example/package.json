@@ -4,9 +4,13 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "pnpm --dir ../reroute run build && vite",
+    "dev": "pnpm run dev:ssr",
+    "dev:spa": "pnpm --dir ../reroute run build && vite",
+    "dev:ssr": "pnpm --dir ../reroute run build && node ssr-dev-server.mjs",
     "build": "pnpm --dir ../reroute run build && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "build:ssr": "pnpm --dir ../reroute run build && vite build --outDir dist/client && vite build --ssr entry-server.tsx --outDir dist/server",
+    "preview:ssr": "pnpm run build:ssr && node ssr-server.mjs"
   },
   "dependencies": {
     "reroute": "workspace:*",

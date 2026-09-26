@@ -10,5 +10,12 @@
     "forceConsistentCasingInFileNames": true,
     "types": ["vite/client"]
   },
-  "include": ["src", "main.tsx", "reroute.d.ts", "vite.config.ts"]
+  "include": [
+    "src",
+    "main.tsx",
+    "entry-client.tsx",
+    "entry-server.tsx",
+    "reroute.d.ts",
+    "vite.config.ts"
+  ]
 }

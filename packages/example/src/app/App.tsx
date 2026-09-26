@@ -1,8 +1,13 @@
-import { Link, RouterProvider, createReactRouter } from "reroute";
+import {
+  Link,
+  RouterProvider,
+  createReactRouter,
+  type RouterResolvedEntry,
+} from "reroute";
 import { InitialLoadingScreen } from "./InitialLoadingScreen";
 import { routes } from "./routes";
 
-const router = createReactRouter(routes);
+export const router = createReactRouter(routes);
 
 function NotFoundPage({ pathname }: { pathname: string }) {
   return (
@@ -37,10 +42,18 @@ function ErrorPage({ error, retry }: { error: unknown; retry: () => void }) {
   );
 }
 
-export function App() {
+export function App({
+  initialPath,
+  initialEntries,
+}: {
+  initialPath?: string;
+  initialEntries?: RouterResolvedEntry[];
+} = {}) {
   return (
     <RouterProvider
       router={router}
+      initialPath={initialPath}
+      initialEntries={initialEntries}
       fallback={<InitialLoadingScreen message="Loading route" />}
       notFound={(location) => <NotFoundPage pathname={location.pathname} />}
       errorBoundary={({ error, retry }) => (

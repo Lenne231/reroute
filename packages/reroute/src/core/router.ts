@@ -6,6 +6,7 @@ export type ResolveArgs<Params extends Record<string, string>, Context> = {
   location: URL;
   context: Context;
   signal: AbortSignal;
+  setStatusCode: (statusCode: number) => void;
 };
 
 export type RouteProps<Path extends string, Context = unknown> = ResolveArgs<

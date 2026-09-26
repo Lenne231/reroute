@@ -32,6 +32,7 @@ export {
   useIsNavigating,
   useNavigate,
   useParams,
+  resolveInitialRouteState,
   createReactRouter,
 } from "./react/router";
 
@@ -39,6 +40,7 @@ export type {
   LinkProps,
   LinkRenderState,
   NavigateProps,
+  RouterResolvedEntry,
   RouterErrorBoundaryRenderArgs,
   RouterErrorBoundaryRenderer,
 } from "./react/router";
