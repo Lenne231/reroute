@@ -7,6 +7,8 @@ export {
   layout,
   buildPath,
   matchPath,
+  lazyRoute,
+  redirect,
   tryMatchPath,
 } from "./core/router";
 

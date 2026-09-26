@@ -1,5 +1,5 @@
-export { prepareServerRender } from "./src/app/ssr";
-import { App } from "./src/app/App";
+export { prepareServerRender } from "./src/ssr";
+import { App } from "./src/App";
 
 export function AppForSSR({
   url,

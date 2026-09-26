@@ -69,3 +69,5 @@ export function resolveHomeRoute() {
     </div>
   );
 }
+
+export default resolveHomeRoute;

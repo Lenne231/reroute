@@ -44,7 +44,7 @@ function UserDetailsPage({
   );
 }
 
-export async function resolveUserDetailRoute({
+export default async function resolveUserDetailRoute({
   params,
   setStatusCode,
 }: RouteProps<":id">) {

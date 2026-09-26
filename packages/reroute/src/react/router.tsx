@@ -19,6 +19,7 @@ import {
   RoutePaths,
   buildPath,
   createRouter,
+  isRedirectResult,
   tryMatchPath,
 } from "../core/router";
 import type { HasRequiredParams, ParamsForPath } from "../types";
@@ -69,6 +70,18 @@ type RouterState<TRoutes extends readonly AnyRouteConfig[]> = {
   pendingHref: string | null;
 };
 
+type RouteResolutionOutcome =
+  | {
+      kind: "entries";
+      entries: RouteStateEntry[];
+    }
+  | {
+      kind: "redirect";
+      targetUrl: URL;
+      replace: boolean;
+      statusCode: number;
+    };
+
 type NotFoundRenderer = ReactNode | ((location: URL) => ReactNode);
 
 export type RouterErrorBoundaryRenderArgs = {
@@ -87,13 +100,14 @@ export async function resolveInitialRouteState<
   const matches = tryMatchPath(router.compiledRoutes, url.pathname);
   if (!matches) {
     return {
+      kind: "notFound" as const,
       entries: [] as RouterResolvedEntry[],
       statusCode: 404,
     };
   }
 
   let statusCode = 200;
-  const entries = (await resolveEntries(
+  const outcome = await resolveEntries(
     undefined,
     matches,
     url,
@@ -101,9 +115,21 @@ export async function resolveInitialRouteState<
     (nextStatusCode) => {
       statusCode = nextStatusCode;
     },
-  )) as RouterResolvedEntry[];
+  );
+
+  if (outcome.kind === "redirect") {
+    return {
+      kind: "redirect" as const,
+      targetUrl: outcome.targetUrl,
+      replace: outcome.replace,
+      statusCode: outcome.statusCode,
+    };
+  }
+
+  const entries = outcome.entries as RouterResolvedEntry[];
 
   return {
+    kind: "resolved" as const,
     entries,
     statusCode,
   };
@@ -171,7 +197,7 @@ async function resolveEntries(
   url: URL,
   signal: AbortSignal,
   setStatusCode: (statusCode: number) => void,
-): Promise<RouteStateEntry[]> {
+): Promise<RouteResolutionOutcome> {
   const nextEntries: RouteStateEntry[] = [];
 
   for (let index = 0; index < nextMatches.length; index += 1) {
@@ -196,6 +222,15 @@ async function resolveEntries(
       setStatusCode,
     });
 
+    if (isRedirectResult(resolved)) {
+      return {
+        kind: "redirect",
+        targetUrl: new URL(resolved.to, url),
+        replace: resolved.replace ?? true,
+        statusCode: resolved.statusCode ?? 302,
+      };
+    }
+
     nextEntries.push({
       route: match.route,
       params: match.params,
@@ -209,7 +244,10 @@ async function resolveEntries(
     });
   }
 
-  return nextEntries;
+  return {
+    kind: "entries",
+    entries: nextEntries,
+  };
 }
 
 export function RouterProvider<
@@ -316,6 +354,19 @@ export function RouterProvider<
             controller.signal,
             () => {},
           );
+          if (resolved.kind === "redirect") {
+            if (navigationCounterRef.current !== requestId) {
+              return;
+            }
+            const redirectMode = resolved.replace ? "replace" : "push";
+            loadAndCommit(
+              resolved.targetUrl,
+              previousEntries,
+              activeRouter,
+              redirectMode,
+            );
+            return;
+          }
           if (
             navigationCounterRef.current !== requestId ||
             routerRef.current !== activeRouter
@@ -323,7 +374,7 @@ export function RouterProvider<
             return;
           }
           setIsNotFound(false);
-          setEntries(resolved);
+          setEntries(resolved.entries);
           setLocation(nextUrl);
         } catch (error) {
           if (controller.signal.aborted) {

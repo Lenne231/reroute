@@ -1,7 +1,7 @@
 import { Link } from "reroute";
 import { users } from "../data/users";
 
-export async function resolveUsersListRoute() {
+export default async function resolveUsersListRoute() {
   console.log("Resolve users index route");
   await new Promise((resolve) => setTimeout(resolve, 2000));
 

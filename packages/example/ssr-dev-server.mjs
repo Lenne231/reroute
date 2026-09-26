@@ -34,8 +34,17 @@ async function start() {
         const { prepareServerRender, AppForSSR } =
           await vite.ssrLoadModule("/entry-server.tsx");
         const requestTarget = `${requestUrl.pathname}${requestUrl.search}${requestUrl.hash}`;
-        const { entries, statusCode } =
-          await prepareServerRender(requestTarget);
+        const initial = await prepareServerRender(requestTarget);
+
+        if (initial.kind === "redirect") {
+          res.writeHead(initial.statusCode, {
+            location: `${initial.targetUrl.pathname}${initial.targetUrl.search}${initial.targetUrl.hash}`,
+          });
+          res.end();
+          return;
+        }
+
+        const { entries, statusCode } = initial;
 
         res.writeHead(statusCode, {
           "content-type": "text/html; charset=utf-8",

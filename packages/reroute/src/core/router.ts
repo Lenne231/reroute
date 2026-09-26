@@ -14,10 +14,63 @@ export type RouteProps<Path extends string, Context = unknown> = ResolveArgs<
   Context
 >;
 
+export type RedirectResult = {
+  readonly __type: "redirect";
+  readonly to: string;
+  readonly search?: URLSearchParams | Record<string, string>;
+  readonly replace?: boolean;
+  readonly statusCode?: number;
+};
+
+export type RedirectOptions = {
+  params?: Record<string, string>;
+  search?: URLSearchParams | Record<string, string>;
+  replace?: boolean;
+  statusCode?: number;
+};
+
+export function redirect<TPath extends string>(
+  to: TPath,
+  options?: RedirectOptions,
+): RedirectResult {
+  const path = buildPath(to, (options?.params ?? {}) as ParamsForPath<TPath>);
+  return {
+    __type: "redirect",
+    to: path,
+    search: options?.search,
+    replace: options?.replace,
+    statusCode: options?.statusCode ?? 302,
+  };
+}
+
+export function isRedirectResult(value: unknown): value is RedirectResult {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "__type" in value &&
+    (value as { __type?: unknown }).__type === "redirect"
+  );
+}
+
+type LazyRouteModule<Params extends Record<string, string>, Context> = {
+  default: ResolveFn<Params, Context>;
+};
+
+export function lazyRoute<
+  Params extends Record<string, string> = Record<string, string>,
+  Context = unknown,
+>(
+  loader: () => Promise<LazyRouteModule<Params, Context>>,
+): ResolveFn<Params, Context> {
+  return async (args) => (await loader()).default(args);
+}
+
 export type ResolveFn<
   Params extends Record<string, string> = Record<string, string>,
   Context = unknown,
-> = (args: ResolveArgs<Params, Context>) => ReactNode | Promise<ReactNode>;
+> = (
+  args: ResolveArgs<Params, Context>,
+) => ReactNode | RedirectResult | Promise<ReactNode | RedirectResult>;
 
 export type RouteConfig<Path extends string = string, TContext = unknown> = {
   path: Path;

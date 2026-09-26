@@ -1,9 +1,9 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { InitialLoadingScreen } from "./src/app/InitialLoadingScreen";
+import { InitialLoadingScreen } from "./src/components/InitialLoadingScreen";
 
 const App = React.lazy(async () => {
-  const module = await import("./src/app/App");
+  const module = await import("./src/App");
   return { default: module.App };
 });
 

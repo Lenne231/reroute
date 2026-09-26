@@ -1,4 +1,4 @@
-import type { routes } from "./src/app/routes";
+import type { routes } from "./src/routes";
 
 declare module "reroute" {
   interface Register {
