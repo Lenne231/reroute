@@ -1,5 +1,12 @@
 import { Suspense } from "react";
-import { Outlet, defineRoutes, index, layout, useIsNavigating } from "reroute";
+import {
+  Outlet,
+  defineRoutes,
+  index,
+  layout,
+  path,
+  useIsNavigating,
+} from "reroute";
 import { InitialLoadingScreen } from "./InitialLoadingScreen";
 import { resolveHomeRoute } from "../features/home/home.route";
 import { usersRoutes } from "../features/users/users.routes";
@@ -52,6 +59,16 @@ async function resolveRootLayout() {
   return <RootLayout message={message} />;
 }
 
+async function resolveFailRoute() {
+  console.log("Resolve fail route");
+  await new Promise((resolve) => setTimeout(resolve, 700));
+  throw new Error("Intentional demo error from /fail");
+}
+
 export const routes = defineRoutes([
-  layout(resolveRootLayout, [index(resolveHomeRoute), usersRoutes]),
+  layout(resolveRootLayout, [
+    index(resolveHomeRoute),
+    path("fail", resolveFailRoute),
+    usersRoutes,
+  ]),
 ] as const);

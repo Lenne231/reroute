@@ -7,6 +7,7 @@ export {
   layout,
   buildPath,
   matchPath,
+  tryMatchPath,
 } from "./core/router";
 
 export type {
@@ -33,7 +34,12 @@ export {
   createReactRouter,
 } from "./react/router";
 
-export type { LinkProps, LinkRenderState } from "./react/router";
+export type {
+  LinkProps,
+  LinkRenderState,
+  RouterErrorBoundaryRenderArgs,
+  RouterErrorBoundaryRenderer,
+} from "./react/router";
 export type {
   ParamsForPath,
   HasParams,

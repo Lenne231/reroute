@@ -34,6 +34,20 @@ export function resolveHomeRoute() {
           return "Browse users";
         }}
       </Link>
+      <br />
+      <Link to="/fail" className={getLinkClassName}>
+        {({ isActive, isNavigating }) => {
+          if (isNavigating) {
+            return "Trigger fail route (loading...)";
+          }
+
+          if (isActive) {
+            return "Trigger fail route (active)";
+          }
+
+          return "Trigger fail route";
+        }}
+      </Link>
     </div>
   );
 }

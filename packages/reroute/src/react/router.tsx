@@ -19,7 +19,7 @@ import {
   RoutePaths,
   buildPath,
   createRouter,
-  matchPath,
+  tryMatchPath,
 } from "../core/router";
 import type { HasRequiredParams, ParamsForPath } from "../types";
 
@@ -63,6 +63,18 @@ type RouterState<TRoutes extends readonly AnyRouteConfig[]> = {
   location: URL;
   pendingHref: string | null;
 };
+
+type NotFoundRenderer = ReactNode | ((location: URL) => ReactNode);
+
+export type RouterErrorBoundaryRenderArgs = {
+  error: unknown;
+  location: URL;
+  retry: () => void;
+};
+
+export type RouterErrorBoundaryRenderer =
+  | ReactNode
+  | ((args: RouterErrorBoundaryRenderArgs) => ReactNode);
 
 function urlToHref(url: URL): string {
   return `${url.pathname}${url.search}`;
@@ -171,10 +183,14 @@ export function RouterProvider<
   router,
   initialPath,
   fallback,
+  notFound,
+  errorBoundary,
 }: {
   router: Router<TRoutes>;
   initialPath?: string;
   fallback?: ReactNode;
+  notFound?: NotFoundRenderer;
+  errorBoundary?: RouterErrorBoundaryRenderer;
 }) {
   const resolvedInitialPath =
     initialPath ??
@@ -185,17 +201,18 @@ export function RouterProvider<
     new URL(resolvedInitialPath, "http://localhost"),
   );
   const [entries, setEntries] = useState<RouteStateEntry[]>(() => {
-    const matches = matchPath(
+    const matches = tryMatchPath(
       router.compiledRoutes,
       initialUrlRef.current.pathname,
     );
-    return matches.map((match) => ({
+    return (matches ?? []).map((match) => ({
       route: match.route,
       params: match.params,
       searchKey: initialUrlRef.current.search,
       hasResolved: false,
     }));
   });
+  const [isNotFound, setIsNotFound] = useState(() => entries.length === 0);
   const [location, setLocation] = useState<URL>(initialUrlRef.current);
   const [pendingHref, setPendingHref] = useState<string | null>(null);
   const [navigationError, setNavigationError] = useState<unknown>(null);
@@ -205,8 +222,6 @@ export function RouterProvider<
   const locationRef = useRef(location);
   const routerRef = useRef(router);
   const initialPathRef = useRef(initialPath);
-  const mountedRef = useRef(false);
-  const previousRouterRef = useRef(router);
   const navigationCounterRef = useRef(0);
   const activeControllerRef = useRef<AbortController | null>(null);
 
@@ -227,6 +242,9 @@ export function RouterProvider<
     setNavigationError(null);
     setPendingHref(urlToHref(nextUrl));
     setIsResolvingRoutes(true);
+    if (historyMode !== "none") {
+      syncBrowserUrl(nextUrl, historyMode === "replace");
+    }
 
     activeControllerRef.current?.abort();
     const controller = new AbortController();
@@ -235,10 +253,20 @@ export function RouterProvider<
     startTransition(() => {
       void (async () => {
         try {
-          const matches = matchPath(
+          const matches = tryMatchPath(
             activeRouter.compiledRoutes,
             nextUrl.pathname,
           );
+          if (!matches) {
+            if (historyMode !== "none") {
+              syncBrowserUrl(nextUrl, historyMode === "replace");
+            }
+            setEntries([]);
+            setLocation(nextUrl);
+            setIsNotFound(true);
+            return;
+          }
+
           const resolved = await resolveEntries(
             previousEntries,
             matches,
@@ -251,15 +279,14 @@ export function RouterProvider<
           ) {
             return;
           }
-          if (historyMode !== "none") {
-            syncBrowserUrl(nextUrl, historyMode === "replace");
-          }
+          setIsNotFound(false);
           setEntries(resolved);
           setLocation(nextUrl);
         } catch (error) {
           if (controller.signal.aborted) {
             return;
           }
+          setLocation(nextUrl);
           setNavigationError(error);
         } finally {
           if (
@@ -277,32 +304,15 @@ export function RouterProvider<
   };
 
   useEffect(() => {
-    if (!mountedRef.current) {
-      mountedRef.current = true;
-      previousRouterRef.current = router;
-      const controller = loadAndCommit(
-        locationRef.current,
-        entriesRef.current,
-        router,
-        "replace",
-      );
-      return () => {
-        controller.abort();
-      };
-    }
-
-    if (previousRouterRef.current !== router) {
-      previousRouterRef.current = router;
-      const controller = loadAndCommit(
-        locationRef.current,
-        entriesRef.current,
-        router,
-        "replace",
-      );
-      return () => {
-        controller.abort();
-      };
-    }
+    const controller = loadAndCommit(
+      locationRef.current,
+      entriesRef.current,
+      router,
+      "replace",
+    );
+    return () => {
+      controller.abort();
+    };
   }, [router]);
 
   useEffect(() => {
@@ -355,6 +365,15 @@ export function RouterProvider<
     );
   }, []);
 
+  const retry = useCallback(() => {
+    loadAndCommit(
+      locationRef.current,
+      entriesRef.current,
+      routerRef.current,
+      "none",
+    );
+  }, []);
+
   const value = useMemo<RouterState<TRoutes>>(
     () => ({
       router,
@@ -367,10 +386,37 @@ export function RouterProvider<
   );
 
   if (navigationError) {
+    const renderedErrorBoundary =
+      typeof errorBoundary === "function"
+        ? errorBoundary({ error: navigationError, location, retry })
+        : errorBoundary;
+
+    if (renderedErrorBoundary) {
+      return (
+        <NavigationStateContext.Provider value={isResolvingRoutes || isPending}>
+          <RouterContext.Provider value={value}>
+            {renderedErrorBoundary}
+          </RouterContext.Provider>
+        </NavigationStateContext.Provider>
+      );
+    }
+
     throw navigationError;
   }
 
-  if (entries.length === 0) {
+  if (isNotFound) {
+    const renderedNotFound =
+      typeof notFound === "function" ? notFound(location) : notFound;
+    if (renderedNotFound) {
+      return (
+        <NavigationStateContext.Provider value={isResolvingRoutes || isPending}>
+          <RouterContext.Provider value={value}>
+            {renderedNotFound}
+          </RouterContext.Provider>
+        </NavigationStateContext.Provider>
+      );
+    }
+
     throw new Error(`No route matched path: ${location.pathname}`);
   }
 

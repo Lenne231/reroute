@@ -164,6 +164,52 @@ navigate("/users/:id", { params: { id: "42" } });
 - Child rendering is handled by `<Outlet />`.
 - Query-string-only navigations re-run resolve functions for matched routes so `location.search`-dependent UI stays fresh.
 
+## 404 handling
+
+Provide a `notFound` renderer on `RouterProvider` to render unmatched paths:
+
+```tsx
+function NotFoundPage({ pathname }: { pathname: string }) {
+  return <h1>404: {pathname}</h1>;
+}
+
+<RouterProvider
+  router={router}
+  notFound={(location) => <NotFoundPage pathname={location.pathname} />}
+/>;
+```
+
+Behavior:
+
+- When a URL does not match any route, `notFound` is rendered instead of throwing.
+- If `notFound` is omitted, unmatched paths keep the current throwing behavior.
+
+## Error boundaries
+
+Provide an `errorBoundary` renderer on `RouterProvider` to handle route resolve
+errors and expose a retry action:
+
+```tsx
+<RouterProvider
+  router={router}
+  errorBoundary={({ error, location, retry }) => (
+    <div>
+      <h1>Route failed at {location.pathname}</h1>
+      <p>{error instanceof Error ? error.message : String(error)}</p>
+      <button type="button" onClick={retry}>
+        Retry
+      </button>
+    </div>
+  )}
+/>
+```
+
+Behavior:
+
+- When a resolve throws/rejects, `errorBoundary` is rendered instead of throwing.
+- Calling `retry` re-runs route resolution for the current URL.
+- If `errorBoundary` is omitted, resolve errors keep the current throwing behavior.
+
 ## API
 
 - `createRouter` / `createReactRouter`
@@ -175,4 +221,5 @@ navigate("/users/:id", { params: { id: "42" } });
 - `defineRoute` / `defineRoutes`
 - `layout` / `path` / `index`
 - `matchPath` (throws when no route matches the provided pathname)
+- `tryMatchPath` (returns `null` when no route matches)
 - `buildPath` (throws when required path params are missing)

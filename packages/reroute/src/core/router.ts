@@ -356,11 +356,19 @@ export function matchPath(
   compiledRoutes: CompiledRoute[],
   pathname: string,
 ): RouteMatch[] {
-  const segments = splitPath(pathname);
-  const result = matchNode(compiledRoutes, segments, 0, {});
+  const result = tryMatchPath(compiledRoutes, pathname);
   if (!result) {
     throw new Error(`No route matched path: ${pathname}`);
   }
+  return result;
+}
+
+export function tryMatchPath(
+  compiledRoutes: CompiledRoute[],
+  pathname: string,
+): RouteMatch[] | null {
+  const segments = splitPath(pathname);
+  const result = matchNode(compiledRoutes, segments, 0, {});
   return result;
 }
 

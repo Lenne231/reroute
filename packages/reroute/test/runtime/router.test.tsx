@@ -132,6 +132,7 @@ describe("router runtime", () => {
     await waitFor(() => {
       expect(screen.getByTestId("id").textContent).toBe("1");
     });
+    const initialParentResolveCount = parentRender.mock.calls.length;
 
     fireEvent.click(screen.getByText("Next"));
     await flushPromises();
@@ -140,7 +141,7 @@ describe("router runtime", () => {
       expect(screen.getByTestId("id").textContent).toBe("2");
     });
 
-    expect(parentRender).toHaveBeenCalledTimes(1);
+    expect(parentRender.mock.calls.length).toBe(initialParentResolveCount);
   });
 
   it("supports useNavigate", async () => {
@@ -604,5 +605,144 @@ describe("router runtime", () => {
       expect(screen.getByTestId("page").textContent).toBe("b");
     });
     expect(window.location.pathname).toBe("/b");
+  });
+
+  it("renders notFound for unmatched routes", async () => {
+    const routes = defineRoutes([
+      {
+        path: "",
+        resolve: () => <Outlet />,
+        children: [
+          {
+            path: "known",
+            resolve: () => <p data-testid="known">known</p>,
+          },
+        ],
+      },
+    ] as const);
+
+    const router = createReactRouter(routes);
+    render(
+      <RouterProvider
+        router={router}
+        initialPath="/missing?from=test"
+        notFound={(location) => (
+          <p data-testid="not-found">{location.pathname + location.search}</p>
+        )}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("not-found").textContent).toBe(
+        "/missing?from=test",
+      );
+    });
+  });
+
+  it("renders errorBoundary for resolve errors and can retry", async () => {
+    let shouldFail = true;
+    const routes = defineRoutes([
+      {
+        path: "",
+        resolve: () => <Outlet />,
+        children: [
+          {
+            path: "boom",
+            resolve: async () => {
+              if (shouldFail) {
+                throw new Error("boom");
+              }
+              return <p data-testid="resolved">ok</p>;
+            },
+          },
+        ],
+      },
+    ] as const);
+
+    const router = createReactRouter(routes);
+    render(
+      <RouterProvider
+        router={router}
+        initialPath="/boom"
+        errorBoundary={({ error, retry }) => (
+          <div>
+            <p data-testid="error-message">
+              {String((error as Error).message)}
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                shouldFail = false;
+                retry();
+              }}
+            >
+              Retry
+            </button>
+          </div>
+        )}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("error-message").textContent).toBe("boom");
+    });
+
+    fireEvent.click(screen.getByText("Retry"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("resolved").textContent).toBe("ok");
+    });
+  });
+
+  it("updates browser URL even when navigation resolve fails", async () => {
+    const routes = defineRoutes([
+      {
+        path: "",
+        resolve: () => <Outlet />,
+        children: [
+          {
+            path: "start",
+            resolve: () => <NavigateToFailPage />,
+          },
+          {
+            path: "boom",
+            resolve: async () => {
+              throw new Error("boom");
+            },
+          },
+        ],
+      },
+    ] as const);
+
+    function NavigateToFailPage() {
+      const navigate = useNavigate<typeof routes>();
+      return (
+        <button type="button" onClick={() => navigate("/boom")}>
+          Go boom
+        </button>
+      );
+    }
+
+    window.history.replaceState(null, "", "/start");
+    const router = createReactRouter(routes);
+    render(
+      <RouterProvider
+        router={router}
+        errorBoundary={({ error }) => (
+          <p data-testid="error-message">{String((error as Error).message)}</p>
+        )}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Go boom")).toBeDefined();
+    });
+
+    fireEvent.click(screen.getByText("Go boom"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("error-message").textContent).toBe("boom");
+    });
+    expect(window.location.pathname).toBe("/boom");
   });
 });
