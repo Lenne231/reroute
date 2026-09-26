@@ -3,7 +3,7 @@ import { users } from "../data/users";
 
 export default async function resolveUsersListRoute() {
   console.log("Resolve users index route");
-  await new Promise((resolve) => setTimeout(resolve, 2000));
+  await new Promise((resolve) => setTimeout(resolve, 1000));
 
   const getLinkClassName = ({
     isActive,

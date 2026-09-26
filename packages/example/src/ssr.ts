@@ -1,7 +1,5 @@
-import { resolveInitialRouteState } from "reroute";
-import { router } from "./App";
+import { resolveInitialRouteStateForUrl } from "./initialRouteState";
 
 export async function prepareServerRender(url: string) {
-  const requestUrl = new URL(url, "http://localhost");
-  return resolveInitialRouteState(router, requestUrl);
+  return resolveInitialRouteStateForUrl(url);
 }

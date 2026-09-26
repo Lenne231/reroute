@@ -198,50 +198,113 @@ async function resolveEntries(
   signal: AbortSignal,
   setStatusCode: (statusCode: number) => void,
 ): Promise<RouteResolutionOutcome> {
+  type ResolutionResult =
+    | {
+        kind: "entry";
+        entry: RouteStateEntry;
+      }
+    | {
+        kind: "redirect";
+        targetUrl: URL;
+        replace: boolean;
+        statusCode: number;
+      }
+    | {
+        kind: "error";
+        error: unknown;
+      };
+
+  const statusCodesByIndex: Array<number | undefined> = new Array(
+    nextMatches.length,
+  );
+
+  const resolutionTasks = nextMatches.map(
+    async (match, index): Promise<ResolutionResult> => {
+      const previous = prevEntries?.[index];
+      if (
+        previous &&
+        previous.route === match.route &&
+        isSameParams(previous.params, match.params) &&
+        previous.searchKey === url.search &&
+        previous.hasResolved
+      ) {
+        return {
+          kind: "entry",
+          entry: previous,
+        };
+      }
+
+      try {
+        const resolved = await match.route.route.resolve({
+          params: match.params,
+          location: url,
+          context: undefined,
+          signal,
+          setStatusCode: (statusCode) => {
+            statusCodesByIndex[index] = statusCode;
+          },
+        });
+
+        if (isRedirectResult(resolved)) {
+          return {
+            kind: "redirect",
+            targetUrl: new URL(resolved.to, url),
+            replace: resolved.replace ?? true,
+            statusCode: resolved.statusCode ?? 302,
+          };
+        }
+
+        return {
+          kind: "entry",
+          entry: {
+            route: match.route,
+            params: match.params,
+            searchKey: url.search,
+            hasResolved: true,
+            element: (
+              <RouteLevelContext.Provider value={index}>
+                {resolved}
+              </RouteLevelContext.Provider>
+            ),
+          },
+        };
+      } catch (error) {
+        return {
+          kind: "error",
+          error,
+        };
+      }
+    },
+  );
+
+  const results = await Promise.all(resolutionTasks);
+
+  for (let index = 0; index < statusCodesByIndex.length; index += 1) {
+    const statusCode = statusCodesByIndex[index];
+    if (statusCode !== undefined) {
+      setStatusCode(statusCode);
+    }
+  }
+
   const nextEntries: RouteStateEntry[] = [];
 
-  for (let index = 0; index < nextMatches.length; index += 1) {
-    const match = nextMatches[index];
-    const previous = prevEntries?.[index];
-    if (
-      previous &&
-      previous.route === match.route &&
-      isSameParams(previous.params, match.params) &&
-      previous.searchKey === url.search &&
-      previous.hasResolved
-    ) {
-      nextEntries.push(previous);
-      continue;
+  for (let index = 0; index < results.length; index += 1) {
+    const result = results[index];
+
+    if (result.kind === "error") {
+      throw result.error;
     }
 
-    const resolved = await match.route.route.resolve({
-      params: match.params,
-      location: url,
-      context: undefined,
-      signal,
-      setStatusCode,
-    });
-
-    if (isRedirectResult(resolved)) {
+    if (result.kind === "redirect") {
       return {
         kind: "redirect",
-        targetUrl: new URL(resolved.to, url),
-        replace: resolved.replace ?? true,
-        statusCode: resolved.statusCode ?? 302,
+        targetUrl: result.targetUrl,
+        replace: result.replace,
+        statusCode: result.statusCode,
       };
     }
 
-    nextEntries.push({
-      route: match.route,
-      params: match.params,
-      searchKey: url.search,
-      hasResolved: true,
-      element: (
-        <RouteLevelContext.Provider value={index}>
-          {resolved}
-        </RouteLevelContext.Provider>
-      ),
-    });
+    nextEntries.push(result.entry);
   }
 
   return {
@@ -519,6 +582,16 @@ export function RouterProvider<
     }
 
     throw new Error(`No route matched path: ${location.pathname}`);
+  }
+
+  if (!entries.some((entry) => entry.hasResolved) && fallback) {
+    return (
+      <NavigationStateContext.Provider value={isResolvingRoutes || isPending}>
+        <RouterContext.Provider value={value}>
+          {fallback}
+        </RouterContext.Provider>
+      </NavigationStateContext.Provider>
+    );
   }
 
   return (
