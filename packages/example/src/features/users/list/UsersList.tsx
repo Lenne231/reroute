@@ -1,9 +1,9 @@
 import { Link } from "reroute";
-import { users } from "../data/users";
+import { type User } from "../data/users";
 import { getLinkClassName } from "./getLinkClassName";
 import { renderLabel } from "./renderLabel";
 
-export function UsersList() {
+export function UsersList({ users }: { users: User[] }) {
   return (
     <div>
       <p>All users</p>

@@ -5,6 +5,13 @@ import { PassThrough } from "node:stream";
 import { renderToPipeableStream } from "react-dom/server";
 import { createServer as createViteServer } from "vite";
 
+function serializeToInlineJson(value) {
+  return JSON.stringify(value)
+    .replace(/</g, "\\u003c")
+    .replace(/\u2028/g, "\\u2028")
+    .replace(/\u2029/g, "\\u2029");
+}
+
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const templatePath = new URL("./index.html", import.meta.url);
 
@@ -44,7 +51,8 @@ async function start() {
           return;
         }
 
-        const { entries, statusCode } = initial;
+        const { entries, hydrationState, statusCode } = initial;
+        const hydrationScript = `<script>window.__REROUTE_INITIAL_DATA__ = ${serializeToInlineJson(hydrationState)};</script>`;
 
         res.writeHead(statusCode, {
           "content-type": "text/html; charset=utf-8",
@@ -54,7 +62,7 @@ async function start() {
         const bodyStream = new PassThrough();
         bodyStream.pipe(res, { end: false });
         bodyStream.on("end", () => {
-          res.end(templateAfter);
+          res.end(`${hydrationScript}${templateAfter}`);
         });
 
         const stream = renderToPipeableStream(

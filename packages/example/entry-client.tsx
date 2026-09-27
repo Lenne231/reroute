@@ -2,6 +2,9 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { App } from "./src/App";
 import { resolveInitialRouteStateForUrl } from "./src/initialRouteState";
+import { hydrateInitialState } from "./src/ssr-cache";
+
+hydrateInitialState(window.__REROUTE_INITIAL_DATA__);
 
 void (async () => {
   const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;

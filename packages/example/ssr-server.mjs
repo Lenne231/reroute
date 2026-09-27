@@ -9,6 +9,13 @@ const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const distClientDir = join(__dirname, "dist/client");
 const distServerEntry = join(__dirname, "dist/server/entry-server.js");
 
+function serializeToInlineJson(value) {
+  return JSON.stringify(value)
+    .replace(/</g, "\\u003c")
+    .replace(/\u2028/g, "\\u2028")
+    .replace(/\u2029/g, "\\u2029");
+}
+
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
@@ -84,7 +91,8 @@ const server = createServer(async (req, res) => {
       return;
     }
 
-    const { entries, statusCode } = initial;
+    const { entries, hydrationState, statusCode } = initial;
+    const hydrationScript = `<script>window.__REROUTE_INITIAL_DATA__ = ${serializeToInlineJson(hydrationState)};</script>`;
 
     res.writeHead(statusCode, { "content-type": "text/html; charset=utf-8" });
     res.write(templateBefore);
@@ -92,7 +100,7 @@ const server = createServer(async (req, res) => {
     const bodyStream = new PassThrough();
     bodyStream.pipe(res, { end: false });
     bodyStream.on("end", () => {
-      res.end(templateAfter);
+      res.end(`${hydrationScript}${templateAfter}`);
     });
 
     const stream = renderToPipeableStream(

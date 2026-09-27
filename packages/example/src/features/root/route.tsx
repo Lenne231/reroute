@@ -1,9 +1,17 @@
 import { RootLayout } from "./RootLayout";
+import { getHydratedValue } from "../../ssr-cache";
+
+async function getRootLayoutMessage() {
+  console.log("Fetching root layout message...");
+  await new Promise((resolve) => setTimeout(resolve, 1000));
+  return "Welcome to the reroute demo!";
+}
 
 export async function resolveRootLayout() {
-  console.log("Resolve root layout");
-  await new Promise((resolve) => setTimeout(resolve, 1000));
-  const message = "Welcome to the reroute demo!";
+  const message = await getHydratedValue(
+    "root-layout-message",
+    getRootLayoutMessage,
+  );
 
   return <RootLayout message={message} />;
 }
