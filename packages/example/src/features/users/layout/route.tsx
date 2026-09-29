@@ -1,5 +1,12 @@
 import { UsersLayout } from "./UsersLayout";
+import type { ReactNode } from "react";
 
-export default function resolveUsersLayoutRoute() {
-  return <UsersLayout />;
+export async function resolveUsersLayoutRoute({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  return <UsersLayout>{children}</UsersLayout>;
 }
+
+export default resolveUsersLayoutRoute;

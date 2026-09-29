@@ -1,7 +1,5 @@
-import { Link } from "reroute";
+import { Link } from "../../../components/Link";
 import { users } from "../data/users";
-import { getLinkClassName } from "./getLinkClassName";
-import { renderLabel } from "./renderLabel";
 
 export function UsersList() {
   return (
@@ -10,22 +8,18 @@ export function UsersList() {
       <ul>
         {users.map((user) => (
           <li key={user.id}>
-            <Link
-              to="/users/:id"
-              params={{ id: user.id }}
-              className={getLinkClassName}
-            >
-              {(state) => renderLabel(user.name, state)}
+            <Link className="nav-link" href={`/users/${user.id}`}>
+              {user.name}
             </Link>
           </li>
         ))}
       </ul>
-      <Link to="/users/create" className={getLinkClassName}>
-        {(state) => renderLabel("Create user", state)}
+      <Link className="nav-link" href="/users/create">
+        Create user
       </Link>
       <br />
-      <Link to="/users/:id" params={{ id: "999" }} className={getLinkClassName}>
-        {(state) => renderLabel("User not found demo", state)}
+      <Link className="nav-link" href="/users/999">
+        User not found demo
       </Link>
     </div>
   );

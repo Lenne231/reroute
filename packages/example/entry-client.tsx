@@ -1,23 +1,13 @@
-import React from "react";
+import type { ReactNode } from "react";
+import { createFromReadableStream } from "@vitejs/plugin-rsc/browser";
 import ReactDOM from "react-dom/client";
-import { App } from "./src/App";
-import { resolveInitialRouteStateForUrl } from "./src/initialRouteState";
+import { installBrowserNavigation } from "./src/navigation";
 
 void (async () => {
-  const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
-  const initial = await resolveInitialRouteStateForUrl(currentUrl);
+  const rscUrl = `${window.location.pathname}.rsc${window.location.search ? `${window.location.search}&` : "?"}partial=0`;
+  const response = await fetch(rscUrl);
+  const root = await createFromReadableStream<ReactNode>(response.body!);
 
-  if (initial.kind === "redirect") {
-    window.location.replace(
-      `${initial.targetUrl.pathname}${initial.targetUrl.search}${initial.targetUrl.hash}`,
-    );
-    return;
-  }
-
-  ReactDOM.hydrateRoot(
-    document.getElementById("root") as HTMLElement,
-    <React.StrictMode>
-      <App initialEntries={initial.entries} />
-    </React.StrictMode>,
-  );
+  ReactDOM.hydrateRoot(document, root);
+  installBrowserNavigation();
 })();

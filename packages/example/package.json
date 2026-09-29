@@ -4,23 +4,22 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "pnpm run dev:ssr",
-    "dev:spa": "pnpm --dir ../reroute run build && vite",
-    "dev:ssr": "pnpm --dir ../reroute run build && node ssr-dev-server.mjs",
-    "build": "pnpm --dir ../reroute run build && vite build",
+    "dev": "vite",
+    "dev:spa": "vite",
+    "dev:ssr": "vite",
+    "build": "vite build",
     "preview": "vite preview",
-    "build:ssr": "pnpm --dir ../reroute run build && vite build --outDir dist/client && vite build --ssr entry-server.tsx --outDir dist/server",
-    "preview:ssr": "pnpm run build:ssr && node ssr-server.mjs"
+    "build:ssr": "vite build",
+    "preview:ssr": "vite preview"
   },
   "dependencies": {
-    "reroute": "workspace:*",
+    "@vitejs/plugin-rsc": "^0.5.35",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
   },
   "devDependencies": {
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "@vitejs/plugin-react": "^5.1.0",
     "typescript": "^5.6.3",
     "vite": "^7.1.7"
   }

@@ -1,9 +1,16 @@
 import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
+import rsc from "@vitejs/plugin-rsc";
 
 export default defineConfig({
-  root: ".",
-  plugins: [react()],
+  plugins: [
+    rsc({
+      entries: {
+        rsc: "./entry.rsc.tsx",
+        ssr: "./entry.ssr.tsx",
+        client: "./entry-client.tsx",
+      },
+    }),
+  ],
   server: {
     fs: {
       allow: [".."],

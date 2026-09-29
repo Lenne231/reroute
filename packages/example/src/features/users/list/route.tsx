@@ -1,8 +1,13 @@
 import { UsersList } from "./UsersList";
 
-export default async function resolveUsersListRoute() {
+export async function resolveUsersListRoute() {
   console.log("Resolve users index route");
-  await new Promise((resolve) => setTimeout(resolve, 1000));
+  //await new Promise((resolve) => setTimeout(resolve, 1000));
 
-  return <UsersList />;
+  return {
+    page: <UsersList />,
+    statusCode: 200,
+  };
 }
+
+export default resolveUsersListRoute;

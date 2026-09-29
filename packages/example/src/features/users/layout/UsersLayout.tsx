@@ -1,10 +1,10 @@
-import { Outlet } from "reroute";
+import type { ReactNode } from "react";
 
-export function UsersLayout() {
+export function UsersLayout({ children }: { children: ReactNode }) {
   return (
     <div>
       <h2>Users</h2>
-      <Outlet />
+      {children}
     </div>
   );
 }

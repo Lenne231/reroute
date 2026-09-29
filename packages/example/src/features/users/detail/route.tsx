@@ -1,20 +1,23 @@
-import { RouteProps } from "reroute";
 import { users } from "../data/users";
 import { UserNotFoundPage } from "./UserNotFoundPage";
 import { UserDetailsPage } from "./UserDetailsPage";
 
-export default async function resolveUserDetailRoute({
-  params,
-  setStatusCode,
-}: RouteProps<":id">) {
-  console.log("Resolve user id route", params.id);
-  await new Promise((resolve) => setTimeout(resolve, 500));
+export async function resolveUserDetailRoute({ id }: { id: string }) {
+  console.log("Resolve user id route", id);
+  //await new Promise((resolve) => setTimeout(resolve, 500));
 
-  const user = users.find((candidate) => candidate.id === params.id);
+  const user = users.find((candidate) => candidate.id === id);
   if (!user) {
-    setStatusCode(404);
-    return <UserNotFoundPage id={params.id} />;
+    return {
+      statusCode: 404,
+      page: <UserNotFoundPage id={id} />,
+    };
   }
 
-  return <UserDetailsPage params={params} user={user} />;
+  return {
+    statusCode: 200,
+    page: <UserDetailsPage params={{ id }} user={user} />,
+  };
 }
+
+export default resolveUserDetailRoute;

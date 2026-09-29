@@ -1,15 +1,11 @@
-import { useNavigate } from "reroute";
+import { Link } from "../../../components/Link";
 
 export function UsersCreatePage() {
-  const navigate = useNavigate();
-
   return (
     <div>
       <h3>Create user</h3>
       <p>This is a placeholder create page.</p>
-      <button type="button" onClick={() => navigate("/users")}>
-        Back to users
-      </button>
+      <Link href="/users">Back to users</Link>
     </div>
   );
 }

@@ -1,5 +1,10 @@
-import { redirect } from "reroute";
-
 export function resolveLegacyUsersRoute() {
-  return redirect("/users", { replace: true });
+  return {
+    page: null,
+    statusCode: 302,
+    redirectTo: "/users",
+    replace: true,
+  };
 }
+
+export default resolveLegacyUsersRoute;

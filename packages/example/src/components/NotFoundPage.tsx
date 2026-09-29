@@ -1,4 +1,4 @@
-import { Link } from "reroute";
+import { Link } from "./Link";
 
 export function NotFoundPage({ pathname }: { pathname: string }) {
   return (
@@ -10,7 +10,7 @@ export function NotFoundPage({ pathname }: { pathname: string }) {
     >
       <h1 style={{ marginTop: 0 }}>404</h1>
       <p>There is no route for: {pathname}</p>
-      <Link to="/">Go home</Link>
+      <Link href="/">Go home</Link>
     </div>
   );
 }
