@@ -8,12 +8,16 @@
     "skipLibCheck": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
+    "baseUrl": ".",
+    "paths": {
+      "reroute": ["../reroute/src/index.ts"]
+    },
     "types": ["vite/client", "@vitejs/plugin-rsc/types"]
   },
   "include": [
     "src",
     "main.tsx",
-    "entry-client.tsx",
+    "entry.browser.tsx",
     "entry.rsc.tsx",
     "entry.ssr.tsx",
     "reroute.d.ts",

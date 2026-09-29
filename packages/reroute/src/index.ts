@@ -12,6 +12,23 @@ export {
   tryMatchPath,
 } from "./core/router";
 
+export { createClientEntry, createRSCEntry, createSSREntry } from "./entries";
+
+export type {
+  CreateClientEntryOptions,
+  CreateRSCEntryOptions,
+  CreateSSREntryOptions,
+  RSCRenderResult,
+} from "./entries";
+
+export { normalizePathname, matchRoutePattern } from "./core/routes";
+
+export type {
+  RouteResolution,
+  RouteDefinition,
+  RouteResolver,
+} from "./core/routes";
+
 export type {
   AnyRouteConfig,
   CompiledRoute,
@@ -26,26 +43,6 @@ export type {
   Router,
 } from "./core/router";
 
-export {
-  RouterProvider,
-  Outlet,
-  Navigate,
-  Link,
-  useIsNavigating,
-  useNavigate,
-  useParams,
-  resolveInitialRouteState,
-  createReactRouter,
-} from "./react/router";
-
-export type {
-  LinkProps,
-  LinkRenderState,
-  NavigateProps,
-  RouterResolvedEntry,
-  RouterErrorBoundaryRenderArgs,
-  RouterErrorBoundaryRenderer,
-} from "./react/router";
 export type {
   ParamsForPath,
   HasParams,

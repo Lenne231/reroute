@@ -7,7 +7,7 @@ export default defineConfig({
       entries: {
         rsc: "./entry.rsc.tsx",
         ssr: "./entry.ssr.tsx",
-        client: "./entry-client.tsx",
+        client: "./entry.client.tsx",
       },
     }),
   ],

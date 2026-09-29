@@ -15,7 +15,8 @@
   "dependencies": {
     "@vitejs/plugin-rsc": "^0.5.35",
     "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "react-dom": "^19.3.0",
+    "reroute": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "^19.3.0",
