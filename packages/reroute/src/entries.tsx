@@ -41,9 +41,10 @@ export function createRSCEntry({
       (requestUrl.pathname.endsWith(".rsc")
         ? requestUrl.pathname.slice(0, -4) || "/"
         : requestUrl.pathname);
+    const rootParam = requestUrl.searchParams.get("root");
     const isPartial =
       isPartialRequest?.(request) ??
-      request.headers.get("x-reroute-partial") === "1";
+      (rootParam !== null && rootParam !== undefined);
 
     const {
       page,
@@ -143,14 +144,10 @@ export function createClientEntry({
     const location = window.location;
     const rscUrl =
       fetchUrl?.(location) ?? `${location.pathname}.rsc${location.search}`;
+    const requestUrl = new URL(rscUrl, location.href);
 
     const response =
-      (await fetchPage?.(location)) ??
-      (await fetch(rscUrl, {
-        headers: {
-          "x-reroute-partial": "0",
-        },
-      }));
+      (await fetchPage?.(location)) ?? (await fetch(requestUrl.toString()));
 
     const root = await createFromReadableStream<ReactNode>(response.body);
 

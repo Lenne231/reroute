@@ -4,7 +4,7 @@ import { UserDetailsPage } from "./UserDetailsPage";
 
 export async function resolveUserDetailRoute({ id }: { id: string }) {
   console.log("Resolve user id route", id);
-  //await new Promise((resolve) => setTimeout(resolve, 500));
+  await new Promise((resolve) => setTimeout(resolve, 1000));
 
   const user = users.find((candidate) => candidate.id === id);
   if (!user) {

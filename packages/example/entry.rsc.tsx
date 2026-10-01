@@ -7,8 +7,8 @@ import { RouteViewport } from "./src/components/RouteViewport";
 export default createRSCEntry({
   renderApp,
   renderToReadableStream,
-  createDocument: ({ page }: { page: ReactNode }) => (
-    <RouteViewport initialPage={page} />
+  createDocument: ({ page, requestUrl }: { page: ReactNode; requestUrl: URL }) => (
+    <RouteViewport initialPage={page} pathname={requestUrl.pathname} />
   ),
   renderHTML: async ({ rscStream }: { rscStream: ReadableStream }) => {
     const ssrModule = await import.meta.viteRsc.import<

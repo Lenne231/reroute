@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { createFromFetch } from "@vitejs/plugin-rsc/browser";
+import { getRouteBranchRoot } from "reroute";
 import { setRouteSnapshot } from "./routeState";
 
 function toRscUrl(url: URL) {
@@ -13,10 +14,13 @@ function normalizeTarget(target: string | URL) {
 }
 
 async function loadRoute(url: URL) {
-  const headers = new Headers();
-  headers.set("x-reroute-partial", "1");
+  const requestUrl = new URL(toRscUrl(url), window.location.href);
+  requestUrl.searchParams.set(
+    "root",
+    getRouteBranchRoot(window.location.pathname, url.pathname),
+  );
 
-  const response = await fetch(toRscUrl(url), { headers });
+  const response = await fetch(requestUrl.toString());
 
   if (response.redirected) {
     const redirectedUrl = new URL(response.url, window.location.href);

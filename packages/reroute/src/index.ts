@@ -7,6 +7,8 @@ export {
   layout,
   buildPath,
   matchPath,
+  matchPathBranch,
+  getRouteBranchRoot,
   lazyRoute,
   redirect,
   tryMatchPath,

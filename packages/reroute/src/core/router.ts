@@ -406,6 +406,30 @@ function matchNode(
   return null;
 }
 
+export function getRouteBranchRoot(currentPath: string, nextPath: string): string {
+  const currentSegments = normalizeRuntimePath(currentPath)
+    .split("/")
+    .filter(Boolean);
+  const nextSegments = normalizeRuntimePath(nextPath)
+    .split("/")
+    .filter(Boolean);
+
+  let shared = 0;
+  while (
+    shared < currentSegments.length &&
+    shared < nextSegments.length &&
+    currentSegments[shared] === nextSegments[shared]
+  ) {
+    shared += 1;
+  }
+
+  if (shared === 0) {
+    return "/";
+  }
+
+  return `/${currentSegments.slice(0, shared).join("/")}`;
+}
+
 export function matchPath(
   compiledRoutes: CompiledRoute[],
   pathname: string,
@@ -415,6 +439,32 @@ export function matchPath(
     throw new Error(`No route matched path: ${pathname}`);
   }
   return result;
+}
+
+export function matchPathBranch(
+  compiledRoutes: CompiledRoute[],
+  pathname: string,
+  rootPath?: string | null,
+): RouteMatch[] | null {
+  const matches = tryMatchPath(compiledRoutes, pathname);
+  if (!matches) {
+    return null;
+  }
+
+  const normalizedRoot = rootPath ? normalizeRuntimePath(rootPath) : "/";
+  if (normalizedRoot === "/") {
+    return matches;
+  }
+
+  const rootIndex = matches.findIndex(
+    ({ route }) => normalizeRuntimePath(route.fullPath) === normalizedRoot,
+  );
+
+  if (rootIndex === -1) {
+    return matches;
+  }
+
+  return matches.slice(rootIndex);
 }
 
 export function tryMatchPath(

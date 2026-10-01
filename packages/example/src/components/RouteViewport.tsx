@@ -12,11 +12,10 @@ import {
 
 type RouteViewportProps = {
   initialPage: React.ReactNode;
+  pathname?: string;
 };
 
-function renderPage(page: React.ReactNode) {
-  const pathname =
-    typeof window !== "undefined" ? window.location.pathname : "/";
+function renderPage(page: React.ReactNode, pathname: string) {
   const content = isUsersRoutePath(pathname) ? (
     <UsersLayout>{page}</UsersLayout>
   ) : (
@@ -28,15 +27,19 @@ function renderPage(page: React.ReactNode) {
   );
 }
 
-export function RouteViewport({ initialPage }: RouteViewportProps) {
+export function RouteViewport({ initialPage, pathname }: RouteViewportProps) {
   const [snapshot, setSnapshot] = useState<RouteSnapshot>({
     page: initialPage,
   });
+  const currentPathname =
+    typeof window !== "undefined"
+      ? window.location.pathname
+      : pathname ?? "/";
 
   useEffect(() => {
     attachRouteSnapshotSetter(setSnapshot);
     setRouteSnapshot({ page: initialPage });
   }, [initialPage]);
 
-  return renderPage(snapshot.page);
+  return renderPage(snapshot.page, currentPathname);
 }
