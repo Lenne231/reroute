@@ -34,7 +34,7 @@ export function RouteViewport({ initialPage, pathname }: RouteViewportProps) {
   const currentPathname =
     typeof window !== "undefined"
       ? window.location.pathname
-      : pathname ?? "/";
+      : (pathname ?? "/");
 
   useEffect(() => {
     attachRouteSnapshotSetter(setSnapshot);

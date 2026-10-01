@@ -406,7 +406,10 @@ function matchNode(
   return null;
 }
 
-export function getRouteBranchRoot(currentPath: string, nextPath: string): string {
+export function getRouteBranchRoot(
+  currentPath: string,
+  nextPath: string,
+): string {
   const currentSegments = normalizeRuntimePath(currentPath)
     .split("/")
     .filter(Boolean);
