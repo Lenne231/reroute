@@ -1,10 +1,17 @@
 import type { ReactNode } from "react";
 
+export type RouteCacheConfig = {
+  swr: boolean;
+  enabled: boolean;
+  ttlMs: number;
+};
+
 export type RouteResolution = {
   page: ReactNode;
   statusCode: number;
   redirectTo?: string;
   replace?: boolean;
+  routeCache?: RouteCacheConfig;
 };
 
 export type RouteResolver = (

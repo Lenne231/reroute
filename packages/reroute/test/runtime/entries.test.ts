@@ -5,6 +5,7 @@ import {
   createSSREntry,
   createRouter,
   getRouteBranchRoot,
+  getRouteCacheKey,
   matchPathBranch,
   matchRoutePattern,
   path,
@@ -81,6 +82,28 @@ describe("entry factories", () => {
     expect(text).toBe("partial-root");
   });
 
+  it("createRSCEntry exposes routeCache metadata in the response headers", async () => {
+    const handler = createRSCEntry({
+      renderApp: async () => ({
+        page: "cached-root",
+        statusCode: 200,
+        routeCache: { swr: true, enabled: true, ttlMs: 30000 },
+      }),
+      renderToReadableStream: (payload) =>
+        new ReadableStream({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode(String(payload)));
+            controller.close();
+          },
+        }),
+    });
+
+    const response = await handler(new Request("http://localhost/users.rsc"));
+    expect(response.headers.get("x-reroute-route-cache")).toBe(
+      JSON.stringify({ swr: true, enabled: true, ttlMs: 30000 }),
+    );
+  });
+
   it("getRouteBranchRoot keeps the shared ancestor between current and target paths", () => {
     expect(getRouteBranchRoot("/users/3", "/users/2")).toBe("/users");
     expect(getRouteBranchRoot("/users/3", "/users/3")).toBe("/users/3");
@@ -102,6 +125,16 @@ describe("entry factories", () => {
       "/users",
       "/users/:id",
     ]);
+  });
+
+  it("getRouteCacheKey keeps the same key for identical URLs and differs by path", () => {
+    const first = new URL("http://localhost/users/2?tab=all");
+    const second = new URL("http://localhost/users/2?tab=all");
+    const other = new URL("http://localhost/users/3?tab=all");
+
+    expect(getRouteCacheKey(first)).toBe("/users/2?tab=all");
+    expect(getRouteCacheKey(first)).toBe(getRouteCacheKey(second));
+    expect(getRouteCacheKey(first)).not.toBe(getRouteCacheKey(other));
   });
 
   it("createClientEntry fetches the initial .rsc document without a partial root flag", async () => {

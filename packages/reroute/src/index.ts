@@ -9,6 +9,7 @@ export {
   matchPath,
   matchPathBranch,
   getRouteBranchRoot,
+  getRouteCacheKey,
   lazyRoute,
   redirect,
   tryMatchPath,
@@ -26,6 +27,7 @@ export type {
 export { normalizePathname, matchRoutePattern } from "./core/routes";
 
 export type {
+  RouteCacheConfig,
   RouteResolution,
   RouteDefinition,
   RouteResolver,

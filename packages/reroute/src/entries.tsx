@@ -1,9 +1,11 @@
 import type { ReactNode } from "react";
+import type { RouteCacheConfig } from "./core/routes";
 
 export type RSCRenderResult = {
   page: ReactNode;
   statusCode?: number;
   redirectTo?: string;
+  routeCache?: RouteCacheConfig;
 };
 
 export type CreateRSCEntryOptions = {
@@ -50,6 +52,7 @@ export function createRSCEntry({
       page,
       redirectTo,
       statusCode = 200,
+      routeCache,
     } = await renderApp(renderPathname);
 
     if (redirectTo) {
@@ -68,13 +71,17 @@ export function createRSCEntry({
         }) ?? page);
 
     const rscStream = renderToReadableStream(payload);
+    const responseHeaders = {
+      "content-type": "text/x-component;charset=utf-8",
+      ...(routeCache
+        ? { "x-reroute-route-cache": JSON.stringify(routeCache) }
+        : {}),
+    };
 
     if (requestUrl.pathname.endsWith(".rsc")) {
       return new Response(rscStream, {
         status: statusCode,
-        headers: {
-          "content-type": "text/x-component;charset=utf-8",
-        },
+        headers: responseHeaders,
       });
     }
 
@@ -94,6 +101,9 @@ export function createRSCEntry({
       status: statusCode,
       headers: {
         "content-type": "text/html; charset=utf-8",
+        ...(routeCache
+          ? { "x-reroute-route-cache": JSON.stringify(routeCache) }
+          : {}),
       },
     });
   };

@@ -433,6 +433,12 @@ export function getRouteBranchRoot(
   return `/${currentSegments.slice(0, shared).join("/")}`;
 }
 
+export function getRouteCacheKey(url: URL | string): string {
+  const nextUrl =
+    typeof url === "string" ? new URL(url, "http://localhost") : url;
+  return `${nextUrl.pathname}${nextUrl.search}`;
+}
+
 export function matchPath(
   compiledRoutes: CompiledRoute[],
   pathname: string,
