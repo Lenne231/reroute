@@ -14,8 +14,11 @@ export function isUsersRoutePath(pathname: string): boolean {
   return normalized === "/users" || normalized.startsWith("/users/");
 }
 
+export type RouteTreeSnapshot = Map<string, ReactNode>;
+
 export type RouteSnapshot = {
   page: ReactNode;
+  routeTree?: RouteTreeSnapshot;
 };
 
 let currentSnapshot: RouteSnapshot | null = null;

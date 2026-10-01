@@ -13,11 +13,16 @@ function normalizeTarget(target: string | URL) {
     : target;
 }
 
+type RouteTreeSnapshot = Map<string, ReactNode>;
+
 type CachedRoute = {
   data: ReactNode;
   fetchedAt: number;
   expiresAt: number;
   ttlMs: number;
+  pathname: string;
+  rootPath: string;
+  routeTree: RouteTreeSnapshot;
 };
 
 function readRouteCacheMetadata(response: Response) {
@@ -66,14 +71,49 @@ export function createRouteCache() {
 
   const cacheKeyFor = (url: URL | string) => getRouteCacheKey(url);
 
-  const fetchFresh = async (url: URL): Promise<ReactNode> => {
+  const getRootPath = (url: URL) =>
+    getRouteBranchRoot(window.location.pathname, url.pathname);
+
+  const mergeRouteTree = (
+    tree: RouteTreeSnapshot,
+    pathname: string,
+    element: ReactNode,
+  ) => {
+    const nextTree = new Map(tree);
+    nextTree.set(pathname, element);
+    return nextTree;
+  };
+
+  const findCachedBranch = (url: URL): CachedRoute | undefined => {
+    const rootPath = getRootPath(url);
+
+    let match: CachedRoute | undefined;
+    for (const cached of cache.values()) {
+      if (
+        cached.rootPath === rootPath &&
+        cached.expiresAt > Date.now() &&
+        cached.pathname !== url.pathname
+      ) {
+        if (!match || cached.pathname.length > match.pathname.length) {
+          match = cached;
+        }
+      }
+    }
+
+    return match;
+  };
+
+  const fetchFresh = async (
+    url: URL,
+    signal?: AbortSignal,
+  ): Promise<ReactNode> => {
     const requestUrl = new URL(toRscUrl(url), window.location.href);
     requestUrl.searchParams.set(
       "root",
       getRouteBranchRoot(window.location.pathname, url.pathname),
     );
 
-    const response = await fetch(requestUrl.toString());
+    const response = await fetch(requestUrl.toString(), { signal });
 
     if (response.redirected) {
       const redirectedUrl = new URL(response.url, window.location.href);
@@ -84,11 +124,15 @@ export function createRouteCache() {
     const routeCacheMetadata = readRouteCacheMetadata(response);
 
     if (routeCacheMetadata) {
+      const mergedTree = mergeRouteTree(new Map(), url.pathname, element);
       cache.set(cacheKeyFor(url), {
         data: element,
         fetchedAt: Date.now(),
         expiresAt: Date.now() + routeCacheMetadata.ttlMs,
         ttlMs: routeCacheMetadata.ttlMs,
+        pathname: url.pathname,
+        rootPath: getRootPath(url),
+        routeTree: mergedTree,
       });
     }
 
@@ -101,13 +145,35 @@ export function createRouteCache() {
 
     if (cached) {
       void (async () => {
-        const fresh = await fetchFresh(url);
+        const fresh = await fetchFresh(url, activeNavigationController?.signal);
         const currentUrl = `${window.location.pathname}${window.location.search}`;
         if (currentUrl === key) {
-          setRouteSnapshot({ page: fresh });
+          const mergedTree = mergeRouteTree(
+            cached.routeTree,
+            url.pathname,
+            fresh,
+          );
+          setRouteSnapshot({ page: fresh, routeTree: mergedTree });
         }
       })();
       return cached.data;
+    }
+
+    const fallback = findCachedBranch(url);
+    if (fallback) {
+      void (async () => {
+        const fresh = await fetchFresh(url, activeNavigationController?.signal);
+        const currentUrl = `${window.location.pathname}${window.location.search}`;
+        if (currentUrl === key) {
+          const mergedTree = mergeRouteTree(
+            fallback.routeTree,
+            url.pathname,
+            fresh,
+          );
+          setRouteSnapshot({ page: fresh, routeTree: mergedTree });
+        }
+      })();
+      return fallback.data;
     }
 
     const existing = inflight.get(key);
@@ -115,9 +181,11 @@ export function createRouteCache() {
       return existing;
     }
 
-    const promise = fetchFresh(url).finally(() => {
-      inflight.delete(key);
-    });
+    const promise = fetchFresh(url, activeNavigationController?.signal).finally(
+      () => {
+        inflight.delete(key);
+      },
+    );
     inflight.set(key, promise);
     return promise;
   };
@@ -130,6 +198,9 @@ export function createRouteCache() {
 }
 
 export const routeCache = createRouteCache();
+
+let latestNavigationId = 0;
+let activeNavigationController: AbortController | null = null;
 
 async function loadRoute(url: URL) {
   return routeCache.load(url);
@@ -144,16 +215,29 @@ export async function navigateTo(target: string | URL, replace = false) {
     return;
   }
 
-  const element = await loadRoute(nextUrl);
-  setRouteSnapshot({
-    page: element,
-  });
+  const navigationId = ++latestNavigationId;
+  activeNavigationController?.abort();
+  const controller = new AbortController();
+  activeNavigationController = controller;
 
   if (replace) {
     window.history.replaceState(null, "", nextHref);
   } else {
     window.history.pushState(null, "", nextHref);
   }
+
+  const element = await loadRoute(nextUrl);
+  if (navigationId !== latestNavigationId || controller.signal.aborted) {
+    return;
+  }
+
+  const activeTree =
+    routeCache.cache.get(routeCache.cacheKeyFor(nextUrl))?.routeTree ??
+    new Map();
+  setRouteSnapshot({
+    page: element,
+    routeTree: activeTree,
+  });
 }
 
 export function installBrowserNavigation() {
