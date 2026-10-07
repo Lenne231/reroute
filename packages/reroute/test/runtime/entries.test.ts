@@ -6,15 +6,38 @@ import {
   createRouter,
   getRouteBranchRoot,
   getRouteCacheKey,
+  layoutDefinition,
   matchPathBranch,
   matchRoutePattern,
   path,
+  routeDefinition,
 } from "../../src";
 
 describe("route utilities", () => {
   it("matches path params and decodes values", () => {
     expect(matchRoutePattern("/users/m%C3%A4rti", "/users/:id")).toEqual({
       id: "märti",
+    });
+  });
+
+  it("builds route and layout definitions from path and resolver", () => {
+    const route = routeDefinition("/users/:id", async () => ({
+      page: "user",
+      statusCode: 200,
+    }));
+    const layout = layoutDefinition("/users", async () => ({
+      page: "users-layout",
+    }));
+
+    expect(route).toEqual({
+      type: "route",
+      path: "/users/:id",
+      resolve: expect.any(Function),
+    });
+    expect(layout).toEqual({
+      type: "layout",
+      path: "/users",
+      resolve: expect.any(Function),
     });
   });
 });

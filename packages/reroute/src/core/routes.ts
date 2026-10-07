@@ -6,6 +6,11 @@ export type RouteCacheConfig = {
   ttlMs: number;
 };
 
+export type LayoutResolution = {
+  page: ReactNode;
+  routeCache?: RouteCacheConfig;
+};
+
 export type RouteResolution = {
   page: ReactNode;
   statusCode: number;
@@ -14,14 +19,51 @@ export type RouteResolution = {
   routeCache?: RouteCacheConfig;
 };
 
+export type RouteResolverResult = LayoutResolution | RouteResolution;
+
 export type RouteResolver = (
   params: Record<string, string>,
 ) => RouteResolution | Promise<RouteResolution>;
 
-export type RouteDefinition = {
+export type LayoutResolver = (
+  ...args: any[]
+) => LayoutResolution | Promise<LayoutResolution>;
+
+export type RouteDefinitionLayout = {
+  type: "layout";
+  path: string;
+  resolve: LayoutResolver;
+};
+
+export type RouteDefinitionRoute = {
+  type: "route";
   path: string;
   resolve: RouteResolver;
 };
+
+export type RouteDefinition = RouteDefinitionLayout | RouteDefinitionRoute;
+
+export function routeDefinition(
+  path: string,
+  resolve: RouteResolver,
+): RouteDefinitionRoute {
+  return {
+    type: "route",
+    path,
+    resolve,
+  };
+}
+
+export function layoutDefinition(
+  path: string,
+  resolve: LayoutResolver,
+): RouteDefinitionLayout {
+  return {
+    type: "layout",
+    path,
+    resolve,
+  };
+}
 
 export function normalizePathname(pathname: string) {
   const normalized = pathname.replace(/\/+$/, "");

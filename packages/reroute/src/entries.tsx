@@ -110,7 +110,7 @@ export function createRSCEntry({
 }
 
 export type CreateSSREntryOptions = {
-  createFromReadableStream: <T>(stream: ReadableStream) => Promise<T>;
+  createFromReadableStream: (stream: ReadableStream) => Promise<any>;
   renderToReadableStream: (
     root: ReactNode,
     options?: { bootstrapModules?: string[] },
@@ -124,7 +124,7 @@ export function createSSREntry({
   getClientEntryUrl,
 }: CreateSSREntryOptions) {
   return async function handleSsr(rscStream: ReadableStream) {
-    const root = await createFromReadableStream<ReactNode>(rscStream);
+    const root = (await createFromReadableStream(rscStream)) as ReactNode;
     return renderToReadableStream(root, {
       bootstrapModules: [getClientEntryUrl()],
     });
@@ -134,7 +134,7 @@ export function createSSREntry({
 export type CreateClientEntryOptions = {
   fetchUrl?: (location: Location) => string;
   fetchPage?: (location: Location) => Promise<Response> | Response;
-  createFromReadableStream: <T>(stream: ReadableStream | null) => Promise<T>;
+  createFromReadableStream: (stream: ReadableStream | null) => Promise<any>;
   hydrateRoot: (
     container: Element | Document,
     initialChildren: ReactNode,
@@ -159,7 +159,7 @@ export function createClientEntry({
     const response =
       (await fetchPage?.(location)) ?? (await fetch(requestUrl.toString()));
 
-    const root = await createFromReadableStream<ReactNode>(response.body);
+    const root = (await createFromReadableStream(response.body)) as ReactNode;
 
     hydrateRoot(document, root);
     installBrowserNavigation?.();

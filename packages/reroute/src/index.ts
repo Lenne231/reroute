@@ -26,10 +26,16 @@ export type {
 
 export { normalizePathname, matchRoutePattern } from "./core/routes";
 
+export { routeDefinition, layoutDefinition } from "./core/routes";
+
 export type {
   RouteCacheConfig,
+  LayoutResolution,
   RouteResolution,
+  RouteResolverResult,
   RouteDefinition,
+  RouteDefinitionLayout,
+  RouteDefinitionRoute,
   RouteResolver,
 } from "./core/routes";
 

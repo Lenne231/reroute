@@ -6,7 +6,9 @@ export async function resolveRootLayout({ children }: { children: ReactNode }) {
   //await new Promise((resolve) => setTimeout(resolve, 1000));
   const message = "Welcome to the reroute demo!";
 
-  return <RootLayout message={message}>{children}</RootLayout>;
+  return {
+    page: <RootLayout message={message}>{children}</RootLayout>,
+  };
 }
 
 export default resolveRootLayout;
